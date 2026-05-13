@@ -1,0 +1,26 @@
+{
+  "updated_at_ist": "2026-05-13 18:33:51 IST",
+  "updated_at_unix": 1778677431,
+  "state": "running",
+  "symbol": "XAUUSD",
+  "magic": 20260511,
+  "lot_size": 0.5,
+  "tp_dist": 3.0,
+  "sl_dist": 15.0,
+  "account": 5050361102,
+  "broker": "MetaQuotes-Demo",
+  "balance": 49250.0,
+  "equity": 49250.0,
+  "currency": "USD",
+  "margin_level": 0.0,
+  "positions_count": 0,
+  "orders_count": 0,
+  "bid": 4687.8,
+  "ask": 4687.97,
+  "spread_usd": 0.17,
+  "server_time": "2026-05-13 16:03:52",
+  "weekly_lock": {
+    "enabled": true,
+    "error": "cannot import name 'get_weekly_pnl' from 'core.start_log' (C:\\Users\\HitheshSunkara\\Desktop\\BOt-2026 ARVION\\xauusd_anchor_bot\\core\\start_log.py)"
+  }
+}

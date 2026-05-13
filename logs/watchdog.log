@@ -1,0 +1,121 @@
+2026-05-13 07:53:14 IST | ============================================================
+2026-05-13 07:53:14 IST | Watchdog starting
+2026-05-13 07:53:14 IST | Project root: C:\Users\HitheshSunkara\Desktop\BOt-2026 ARVION\xauusd_anchor_bot
+2026-05-13 07:53:14 IST | Main script: C:\Users\HitheshSunkara\Desktop\BOt-2026 ARVION\xauusd_anchor_bot\main.py
+2026-05-13 07:53:14 IST | Status file: C:\Users\HitheshSunkara\Desktop\BOt-2026 ARVION\xauusd_anchor_bot\logs\status.json
+2026-05-13 07:53:14 IST | Halt flag: C:\Users\HitheshSunkara\Desktop\BOt-2026 ARVION\xauusd_anchor_bot\halt.flag
+2026-05-13 07:53:14 IST | ============================================================
+2026-05-13 07:53:14 IST | ⚠️ TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID env vars not set.
+2026-05-13 07:53:14 IST | Watchdog will supervise main.py but Telegram commands won't work.
+2026-05-13 07:53:14 IST | Starting: C:\Python314\python.exe -u C:\Users\HitheshSunkara\Desktop\BOt-2026 ARVION\xauusd_anchor_bot\main.py
+2026-05-13 07:53:14 IST | main.py started (PID 29784)
+2026-05-13 07:53:14 IST | Watchdog monitor loop started
+2026-05-13 08:02:18 IST | KeyboardInterrupt — shutting down
+2026-05-13 08:02:18 IST | Terminating main.py (PID 29784)
+2026-05-13 08:02:18 IST | main.py exited (code 1)
+2026-05-13 08:02:18 IST | Watchdog shutdown complete
+2026-05-13 08:02:20 IST | ============================================================
+2026-05-13 08:02:20 IST | Watchdog starting
+2026-05-13 08:02:20 IST | Project root: C:\Users\HitheshSunkara\Desktop\BOt-2026 ARVION\xauusd_anchor_bot
+2026-05-13 08:02:20 IST | Main script: C:\Users\HitheshSunkara\Desktop\BOt-2026 ARVION\xauusd_anchor_bot\main.py
+2026-05-13 08:02:20 IST | Status file: C:\Users\HitheshSunkara\Desktop\BOt-2026 ARVION\xauusd_anchor_bot\logs\status.json
+2026-05-13 08:02:20 IST | Halt flag: C:\Users\HitheshSunkara\Desktop\BOt-2026 ARVION\xauusd_anchor_bot\halt.flag
+2026-05-13 08:02:20 IST | ============================================================
+2026-05-13 08:02:20 IST | ⚠️ TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID env vars not set.
+2026-05-13 08:02:20 IST | Watchdog will supervise main.py but Telegram commands won't work.
+2026-05-13 08:02:20 IST | Telegram polling disabled (no credentials)
+2026-05-13 08:02:20 IST | Starting: C:\Python314\python.exe -u C:\Users\HitheshSunkara\Desktop\BOt-2026 ARVION\xauusd_anchor_bot\main.py
+2026-05-13 08:02:20 IST | main.py started (PID 30176)
+2026-05-13 08:02:20 IST | Watchdog monitor loop started
+2026-05-13 11:23:40 IST | KeyboardInterrupt — shutting down
+2026-05-13 11:23:40 IST | Terminating main.py (PID 30176)
+2026-05-13 11:23:40 IST | main.py exited (code 1)
+2026-05-13 11:23:40 IST | Watchdog shutdown complete
+2026-05-13 11:23:42 IST | ============================================================
+2026-05-13 11:23:42 IST | Watchdog starting
+2026-05-13 11:23:42 IST | Project root: C:\Users\HitheshSunkara\Desktop\BOt-2026 ARVION\xauusd_anchor_bot
+2026-05-13 11:23:42 IST | Main script: C:\Users\HitheshSunkara\Desktop\BOt-2026 ARVION\xauusd_anchor_bot\main.py
+2026-05-13 11:23:42 IST | Status file: C:\Users\HitheshSunkara\Desktop\BOt-2026 ARVION\xauusd_anchor_bot\logs\status.json
+2026-05-13 11:23:42 IST | Halt flag: C:\Users\HitheshSunkara\Desktop\BOt-2026 ARVION\xauusd_anchor_bot\halt.flag
+2026-05-13 11:23:42 IST | ============================================================
+2026-05-13 11:23:42 IST | ⚠️ TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID env vars not set.
+2026-05-13 11:23:42 IST | Watchdog will supervise main.py but Telegram commands won't work.
+2026-05-13 11:23:42 IST | Telegram polling disabled (no credentials)
+2026-05-13 11:23:42 IST | Starting: C:\Python314\python.exe -u C:\Users\HitheshSunkara\Desktop\BOt-2026 ARVION\xauusd_anchor_bot\main.py
+2026-05-13 11:23:42 IST | main.py started (PID 3260)
+2026-05-13 11:23:42 IST | Watchdog monitor loop started
+2026-05-13 11:27:08 IST | KeyboardInterrupt — shutting down
+2026-05-13 11:27:08 IST | Terminating main.py (PID 3260)
+2026-05-13 11:27:08 IST | main.py exited (code 1)
+2026-05-13 11:27:08 IST | Watchdog shutdown complete
+2026-05-13 11:27:09 IST | ============================================================
+2026-05-13 11:27:09 IST | Watchdog starting
+2026-05-13 11:27:09 IST | Project root: C:\Users\HitheshSunkara\Desktop\BOt-2026 ARVION\xauusd_anchor_bot
+2026-05-13 11:27:09 IST | Main script: C:\Users\HitheshSunkara\Desktop\BOt-2026 ARVION\xauusd_anchor_bot\main.py
+2026-05-13 11:27:09 IST | Status file: C:\Users\HitheshSunkara\Desktop\BOt-2026 ARVION\xauusd_anchor_bot\logs\status.json
+2026-05-13 11:27:09 IST | Halt flag: C:\Users\HitheshSunkara\Desktop\BOt-2026 ARVION\xauusd_anchor_bot\halt.flag
+2026-05-13 11:27:09 IST | .env file: LOADED
+2026-05-13 11:27:09 IST | ============================================================
+2026-05-13 11:27:09 IST | ✓ TELEGRAM_BOT_TOKEN: ...zvic  TELEGRAM_CHAT_ID: 1353536439
+2026-05-13 11:27:09 IST | Testing Telegram connection (getMe)...
+2026-05-13 11:27:11 IST | ✓ Telegram bot reachable: @apex_xauusd_bot
+2026-05-13 11:27:11 IST | Sending test message to chat...
+2026-05-13 11:27:12 IST | ✓ Test message sent to chat 1353536439
+2026-05-13 11:27:12 IST | Starting: C:\Python314\python.exe -u C:\Users\HitheshSunkara\Desktop\BOt-2026 ARVION\xauusd_anchor_bot\main.py
+2026-05-13 11:27:12 IST | main.py started (PID 20400)
+2026-05-13 11:27:12 IST | Watchdog monitor loop started
+2026-05-13 11:27:13 IST | Command received: /restart 
+2026-05-13 11:27:15 IST | Terminating main.py (PID 20400)
+2026-05-13 11:27:15 IST | main.py exited (code 1)
+2026-05-13 11:27:17 IST | Starting: C:\Python314\python.exe -u C:\Users\HitheshSunkara\Desktop\BOt-2026 ARVION\xauusd_anchor_bot\main.py
+2026-05-13 11:27:17 IST | main.py started (PID 28720)
+2026-05-13 11:27:18 IST | Command received: /status 
+2026-05-13 11:27:20 IST | Command received: /restart 
+2026-05-13 11:27:21 IST | Terminating main.py (PID 28720)
+2026-05-13 11:27:22 IST | main.py exited (code 1)
+2026-05-13 11:27:22 IST | main.py exited with code 1
+2026-05-13 11:27:24 IST | Starting: C:\Python314\python.exe -u C:\Users\HitheshSunkara\Desktop\BOt-2026 ARVION\xauusd_anchor_bot\main.py
+2026-05-13 11:27:24 IST | main.py started (PID 20984)
+2026-05-13 11:27:24 IST | Backoff 30s before restart attempt 2
+2026-05-13 11:27:25 IST | Command received: /status 
+2026-05-13 11:27:27 IST | Command received: /restart 
+2026-05-13 11:27:29 IST | Terminating main.py (PID 20984)
+2026-05-13 11:27:29 IST | main.py exited (code 1)
+2026-05-13 11:27:31 IST | Starting: C:\Python314\python.exe -u C:\Users\HitheshSunkara\Desktop\BOt-2026 ARVION\xauusd_anchor_bot\main.py
+2026-05-13 11:27:31 IST | main.py started (PID 6416)
+2026-05-13 11:27:33 IST | Command received: /restart 
+2026-05-13 11:27:35 IST | Terminating main.py (PID 6416)
+2026-05-13 11:27:35 IST | main.py exited (code 1)
+2026-05-13 11:27:37 IST | Starting: C:\Python314\python.exe -u C:\Users\HitheshSunkara\Desktop\BOt-2026 ARVION\xauusd_anchor_bot\main.py
+2026-05-13 11:27:37 IST | main.py started (PID 13060)
+2026-05-13 11:27:38 IST | Command received: /status 
+2026-05-13 11:27:40 IST | Command received: /restart 
+2026-05-13 11:27:42 IST | Terminating main.py (PID 13060)
+2026-05-13 11:27:42 IST | main.py exited (code 1)
+2026-05-13 11:27:44 IST | Starting: C:\Python314\python.exe -u C:\Users\HitheshSunkara\Desktop\BOt-2026 ARVION\xauusd_anchor_bot\main.py
+2026-05-13 11:27:44 IST | main.py started (PID 11888)
+2026-05-13 11:27:54 IST | start_main: already running, no-op
+2026-05-13 11:27:54 IST | Command received: /status 
+2026-05-13 11:38:47 IST | Telegram poll error: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))
+2026-05-13 11:54:44 IST | Telegram poll error: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot8602784661:AAFt3sV48c7Uj-gbtEWgrdfYFQyqQrhzvic/getUpdates?offset=9545890&timeout=30 (Caused by NewConnectionError("HTTPSConnection(host='api.telegram.org', port=443): Failed to establish a new connection: [WinError 10051] A socket operation was attempted to an unreachable network"))
+2026-05-13 11:54:49 IST | Telegram poll error: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot8602784661:AAFt3sV48c7Uj-gbtEWgrdfYFQyqQrhzvic/getUpdates?offset=9545890&timeout=30 (Caused by NameResolutionError("HTTPSConnection(host='api.telegram.org', port=443): Failed to resolve 'api.telegram.org' ([Errno 11001] getaddrinfo failed)"))
+2026-05-13 11:54:54 IST | Telegram poll error: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot8602784661:AAFt3sV48c7Uj-gbtEWgrdfYFQyqQrhzvic/getUpdates?offset=9545890&timeout=30 (Caused by NameResolutionError("HTTPSConnection(host='api.telegram.org', port=443): Failed to resolve 'api.telegram.org' ([Errno 11001] getaddrinfo failed)"))
+2026-05-13 11:54:59 IST | Telegram poll error: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot8602784661:AAFt3sV48c7Uj-gbtEWgrdfYFQyqQrhzvic/getUpdates?offset=9545890&timeout=30 (Caused by NameResolutionError("HTTPSConnection(host='api.telegram.org', port=443): Failed to resolve 'api.telegram.org' ([Errno 11001] getaddrinfo failed)"))
+2026-05-13 11:55:04 IST | Telegram poll error: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot8602784661:AAFt3sV48c7Uj-gbtEWgrdfYFQyqQrhzvic/getUpdates?offset=9545890&timeout=30 (Caused by NameResolutionError("HTTPSConnection(host='api.telegram.org', port=443): Failed to resolve 'api.telegram.org' ([Errno 11001] getaddrinfo failed)"))
+2026-05-13 11:55:09 IST | Telegram poll error: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot8602784661:AAFt3sV48c7Uj-gbtEWgrdfYFQyqQrhzvic/getUpdates?offset=9545890&timeout=30 (Caused by NameResolutionError("HTTPSConnection(host='api.telegram.org', port=443): Failed to resolve 'api.telegram.org' ([Errno 11001] getaddrinfo failed)"))
+2026-05-13 11:55:14 IST | Telegram poll error: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot8602784661:AAFt3sV48c7Uj-gbtEWgrdfYFQyqQrhzvic/getUpdates?offset=9545890&timeout=30 (Caused by NameResolutionError("HTTPSConnection(host='api.telegram.org', port=443): Failed to resolve 'api.telegram.org' ([Errno 11001] getaddrinfo failed)"))
+2026-05-13 11:55:19 IST | Telegram poll error: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot8602784661:AAFt3sV48c7Uj-gbtEWgrdfYFQyqQrhzvic/getUpdates?offset=9545890&timeout=30 (Caused by NameResolutionError("HTTPSConnection(host='api.telegram.org', port=443): Failed to resolve 'api.telegram.org' ([Errno 11001] getaddrinfo failed)"))
+2026-05-13 11:55:24 IST | Telegram poll error: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot8602784661:AAFt3sV48c7Uj-gbtEWgrdfYFQyqQrhzvic/getUpdates?offset=9545890&timeout=30 (Caused by NameResolutionError("HTTPSConnection(host='api.telegram.org', port=443): Failed to resolve 'api.telegram.org' ([Errno 11001] getaddrinfo failed)"))
+2026-05-13 11:55:29 IST | Telegram poll error: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot8602784661:AAFt3sV48c7Uj-gbtEWgrdfYFQyqQrhzvic/getUpdates?offset=9545890&timeout=30 (Caused by NameResolutionError("HTTPSConnection(host='api.telegram.org', port=443): Failed to resolve 'api.telegram.org' ([Errno 11001] getaddrinfo failed)"))
+2026-05-13 11:55:34 IST | Telegram poll error: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot8602784661:AAFt3sV48c7Uj-gbtEWgrdfYFQyqQrhzvic/getUpdates?offset=9545890&timeout=30 (Caused by NameResolutionError("HTTPSConnection(host='api.telegram.org', port=443): Failed to resolve 'api.telegram.org' ([Errno 11001] getaddrinfo failed)"))
+2026-05-13 11:55:39 IST | Telegram poll error: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot8602784661:AAFt3sV48c7Uj-gbtEWgrdfYFQyqQrhzvic/getUpdates?offset=9545890&timeout=30 (Caused by NameResolutionError("HTTPSConnection(host='api.telegram.org', port=443): Failed to resolve 'api.telegram.org' ([Errno 11001] getaddrinfo failed)"))
+2026-05-13 11:55:44 IST | Telegram poll error: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot8602784661:AAFt3sV48c7Uj-gbtEWgrdfYFQyqQrhzvic/getUpdates?offset=9545890&timeout=30 (Caused by NameResolutionError("HTTPSConnection(host='api.telegram.org', port=443): Failed to resolve 'api.telegram.org' ([Errno 11001] getaddrinfo failed)"))
+2026-05-13 11:55:49 IST | Telegram poll error: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot8602784661:AAFt3sV48c7Uj-gbtEWgrdfYFQyqQrhzvic/getUpdates?offset=9545890&timeout=30 (Caused by NameResolutionError("HTTPSConnection(host='api.telegram.org', port=443): Failed to resolve 'api.telegram.org' ([Errno 11001] getaddrinfo failed)"))
+2026-05-13 11:55:54 IST | Telegram poll error: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot8602784661:AAFt3sV48c7Uj-gbtEWgrdfYFQyqQrhzvic/getUpdates?offset=9545890&timeout=30 (Caused by NameResolutionError("HTTPSConnection(host='api.telegram.org', port=443): Failed to resolve 'api.telegram.org' ([Errno 11001] getaddrinfo failed)"))
+2026-05-13 11:55:59 IST | Telegram poll error: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot8602784661:AAFt3sV48c7Uj-gbtEWgrdfYFQyqQrhzvic/getUpdates?offset=9545890&timeout=30 (Caused by NameResolutionError("HTTPSConnection(host='api.telegram.org', port=443): Failed to resolve 'api.telegram.org' ([Errno 11001] getaddrinfo failed)"))
+2026-05-13 11:56:04 IST | Telegram poll error: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot8602784661:AAFt3sV48c7Uj-gbtEWgrdfYFQyqQrhzvic/getUpdates?offset=9545890&timeout=30 (Caused by NameResolutionError("HTTPSConnection(host='api.telegram.org', port=443): Failed to resolve 'api.telegram.org' ([Errno 11001] getaddrinfo failed)"))
+2026-05-13 11:56:09 IST | Telegram poll error: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot8602784661:AAFt3sV48c7Uj-gbtEWgrdfYFQyqQrhzvic/getUpdates?offset=9545890&timeout=30 (Caused by NameResolutionError("HTTPSConnection(host='api.telegram.org', port=443): Failed to resolve 'api.telegram.org' ([Errno 11001] getaddrinfo failed)"))
+2026-05-13 12:20:35 IST | Telegram poll error: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot8602784661:AAFt3sV48c7Uj-gbtEWgrdfYFQyqQrhzvic/getUpdates?offset=9545890&timeout=30 (Caused by NameResolutionError("HTTPSConnection(host='api.telegram.org', port=443): Failed to resolve 'api.telegram.org' ([Errno 11001] getaddrinfo failed)"))
+2026-05-13 13:07:59 IST | Telegram poll error: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bot8602784661:AAFt3sV48c7Uj-gbtEWgrdfYFQyqQrhzvic/getUpdates?offset=9545890&timeout=30 (Caused by NameResolutionError("HTTPSConnection(host='api.telegram.org', port=443): Failed to resolve 'api.telegram.org' ([Errno 11001] getaddrinfo failed)"))
+2026-05-13 16:14:15 IST | Telegram poll error: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))
+2026-05-13 18:29:13 IST | Telegram poll error: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))

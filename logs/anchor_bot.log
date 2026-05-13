@@ -145,3 +145,355 @@
 2026-05-13 06:31:16 | INFO    | Next anchor: 2026-05-14 02:00:00 (broker time). Waiting 21.98 hr...
 2026-05-13 07:25:51 | INFO    | Bot stopped by user.
 2026-05-13 07:25:51 | INFO    | Disconnected from MT5.
+2026-05-13 07:25:53 | INFO    | Telegram notifications: ENABLED
+2026-05-13 07:25:53 | INFO    | ======================================================================
+2026-05-13 07:25:53 | INFO    | XAUUSD Anchor Bot starting
+2026-05-13 07:25:53 | INFO    | Symbol=XAUUSD | Lot=0.5 | Magic=20260511
+2026-05-13 07:25:53 | INFO    | Anchor=2:00 | Trigger=±$10.0 | TP=±$3.0 | SL=±$15.0
+2026-05-13 07:25:53 | INFO    | Lock step=$0.3 × 9 levels (2.70 max)
+2026-05-13 07:25:53 | INFO    | Safety: max_spread=$0.5, max_daily_loss=4.0%, EOD_cancel=23:00
+2026-05-13 07:25:53 | INFO    | ======================================================================
+2026-05-13 07:25:53 | INFO    | Connected | Account: 5050361102 | Broker: MetaQuotes-Demo
+2026-05-13 07:25:53 | INFO    | Balance: $49250.00 | Equity: $49250.00 | Mode: DEMO
+2026-05-13 07:25:53 | INFO    | Symbol: XAUUSD | Digits: 2 | Point: 0.01 | Stops level (min dist): 0 pts
+2026-05-13 07:25:53 | INFO    | ============================================================
+2026-05-13 07:25:53 | INFO    | STARTUP SANITY SUMMARY
+2026-05-13 07:25:53 | INFO    |   Account: 5050361102  Broker: MetaQuotes-Demo
+2026-05-13 07:25:53 | INFO    |   Equity: $49250.00  Balance: $49250.00
+2026-05-13 07:25:53 | INFO    |   Symbol: XAUUSD  Lot: 0.50
+2026-05-13 07:25:53 | INFO    |   Server time: 2026-05-13 04:55:54
+2026-05-13 07:25:53 | INFO    |   Bot positions: 0  Bot pendings: 0
+2026-05-13 07:25:53 | INFO    |   Non-bot positions (other magics): 0
+2026-05-13 07:25:53 | INFO    |   Non-bot pendings (other magics): 0
+2026-05-13 07:25:53 | INFO    | ============================================================
+2026-05-13 07:25:54 | INFO    | Telegram sent: 🚀 XAUUSD Anchor Bot started
+2026-05-13 07:25:54 | INFO    | Startup recovery: checking for in-progress state...
+2026-05-13 07:25:54 | INFO    | Server time 2026-05-13 04:55:55 is past anchor — attempting late capture for 2026-05-13...
+2026-05-13 07:25:54 | INFO    | Fetched 288 M5 bars | range: 2026-05-12 03:00:00 → 2026-05-13 04:55:00 (broker time)
+2026-05-13 07:25:54 | INFO    | Anchor captured: $4716.96 at 2026-05-13 02:00:00
+2026-05-13 07:25:54 | WARNING | Late anchor recovery skipped: Anchor 4716.96, short trigger 4706.96 | bid 4706.53 past trigger (mid-breakout, conservative skip)
+2026-05-13 07:25:55 | INFO    | Telegram sent: ⏭ Late anchor skipped
+2026-05-13 07:25:55 | INFO    | Next anchor: 2026-05-14 02:00:00 (broker time). Waiting 21.07 hr...
+2026-05-13 07:36:52 | INFO    | Bot stopped by user.
+2026-05-13 07:36:52 | INFO    | Disconnected from MT5.
+2026-05-13 07:36:54 | WARNING | Telegram enabled in config but token/chat_id missing — disabled.
+2026-05-13 07:36:54 | INFO    | ======================================================================
+2026-05-13 07:36:54 | INFO    | XAUUSD Anchor Bot starting
+2026-05-13 07:36:54 | INFO    | Symbol=XAUUSD | Lot=0.5 | Magic=20260511
+2026-05-13 07:36:54 | INFO    | Anchor=2:00 | Trigger=±$10.0 | TP=±$3.0 | SL=±$15.0
+2026-05-13 07:36:54 | INFO    | Lock step=$0.3 × 9 levels (2.70 max)
+2026-05-13 07:36:54 | INFO    | Safety: max_spread=$0.5, max_daily_loss=4.0%, EOD_cancel=23:00
+2026-05-13 07:36:54 | INFO    | ======================================================================
+2026-05-13 07:36:54 | INFO    | Connected | Account: 5050361102 | Broker: MetaQuotes-Demo
+2026-05-13 07:36:54 | INFO    | Balance: $49250.00 | Equity: $49250.00 | Mode: DEMO
+2026-05-13 07:36:54 | INFO    | Symbol: XAUUSD | Digits: 2 | Point: 0.01 | Stops level (min dist): 0 pts
+2026-05-13 07:36:54 | INFO    | ============================================================
+2026-05-13 07:36:54 | INFO    | STARTUP SANITY SUMMARY
+2026-05-13 07:36:54 | INFO    |   Account: 5050361102  Broker: MetaQuotes-Demo
+2026-05-13 07:36:54 | INFO    |   Equity: $49250.00  Balance: $49250.00
+2026-05-13 07:36:54 | INFO    |   Symbol: XAUUSD  Lot: 0.50
+2026-05-13 07:36:54 | INFO    |   Server time: 2026-05-13 05:06:54
+2026-05-13 07:36:54 | INFO    |   Bot positions: 0  Bot pendings: 0
+2026-05-13 07:36:54 | INFO    |   Non-bot positions (other magics): 0
+2026-05-13 07:36:54 | INFO    |   Non-bot pendings (other magics): 0
+2026-05-13 07:36:54 | INFO    | ============================================================
+2026-05-13 07:36:54 | INFO    | Startup recovery: checking for in-progress state...
+2026-05-13 07:36:54 | INFO    | Server time 2026-05-13 05:06:54 is past anchor — attempting late capture for 2026-05-13...
+2026-05-13 07:36:54 | INFO    | Fetched 288 M5 bars | range: 2026-05-12 03:10:00 → 2026-05-13 05:05:00 (broker time)
+2026-05-13 07:36:54 | INFO    | Anchor captured: $4716.96 at 2026-05-13 02:00:00
+2026-05-13 07:36:54 | WARNING | Late anchor recovery skipped: Anchor 4716.96, short TP 4703.96 | bid 4703.95 already past TP (window closed)
+2026-05-13 07:36:54 | INFO    | Next anchor: 2026-05-14 02:00:00 (broker time). Waiting 20.89 hr...
+2026-05-13 07:37:45 | INFO    | Bot stopped by user.
+2026-05-13 07:37:45 | INFO    | Disconnected from MT5.
+2026-05-13 07:37:57 | WARNING | Telegram enabled in config but token/chat_id missing — disabled.
+2026-05-13 07:37:57 | INFO    | ======================================================================
+2026-05-13 07:37:57 | INFO    | XAUUSD Anchor Bot starting
+2026-05-13 07:37:57 | INFO    | Symbol=XAUUSD | Lot=0.5 | Magic=20260511
+2026-05-13 07:37:57 | INFO    | Anchor=2:00 | Trigger=±$10.0 | TP=±$3.0 | SL=±$15.0
+2026-05-13 07:37:57 | INFO    | Lock step=$0.3 × 9 levels (2.70 max)
+2026-05-13 07:37:57 | INFO    | Safety: max_spread=$0.5, max_daily_loss=4.0%, EOD_cancel=23:00
+2026-05-13 07:37:57 | INFO    | ======================================================================
+2026-05-13 07:37:57 | INFO    | Connected | Account: 5050361102 | Broker: MetaQuotes-Demo
+2026-05-13 07:37:57 | INFO    | Balance: $49250.00 | Equity: $49250.00 | Mode: DEMO
+2026-05-13 07:37:57 | INFO    | Symbol: XAUUSD | Digits: 2 | Point: 0.01 | Stops level (min dist): 0 pts
+2026-05-13 07:37:57 | INFO    | ============================================================
+2026-05-13 07:37:57 | INFO    | STARTUP SANITY SUMMARY
+2026-05-13 07:37:57 | INFO    |   Account: 5050361102  Broker: MetaQuotes-Demo
+2026-05-13 07:37:57 | INFO    |   Equity: $49250.00  Balance: $49250.00
+2026-05-13 07:37:57 | INFO    |   Symbol: XAUUSD  Lot: 0.50
+2026-05-13 07:37:57 | INFO    |   Server time: 2026-05-13 05:07:57
+2026-05-13 07:37:57 | INFO    |   Bot positions: 0  Bot pendings: 0
+2026-05-13 07:37:57 | INFO    |   Non-bot positions (other magics): 0
+2026-05-13 07:37:57 | INFO    |   Non-bot pendings (other magics): 0
+2026-05-13 07:37:57 | INFO    | ============================================================
+2026-05-13 07:37:57 | INFO    | Startup recovery: checking for in-progress state...
+2026-05-13 07:37:57 | INFO    | Server time 2026-05-13 05:07:57 is past anchor — attempting late capture for 2026-05-13...
+2026-05-13 07:37:57 | INFO    | Fetched 288 M5 bars | range: 2026-05-12 03:10:00 → 2026-05-13 05:05:00 (broker time)
+2026-05-13 07:37:57 | INFO    | Anchor captured: $4716.96 at 2026-05-13 02:00:00
+2026-05-13 07:37:57 | WARNING | Late anchor recovery skipped: Anchor 4716.96, short TP 4703.96 | bid 4701.13 already past TP (window closed)
+2026-05-13 07:37:57 | INFO    | Next anchor: 2026-05-14 02:00:00 (broker time). Waiting 20.87 hr...
+2026-05-13 07:38:25 | INFO    | Bot stopped by user.
+2026-05-13 07:38:25 | INFO    | Disconnected from MT5.
+2026-05-13 07:38:27 | WARNING | Telegram enabled in config but token/chat_id missing — disabled.
+2026-05-13 07:38:27 | INFO    | ======================================================================
+2026-05-13 07:38:27 | INFO    | XAUUSD Anchor Bot starting
+2026-05-13 07:38:27 | INFO    | Symbol=XAUUSD | Lot=0.5 | Magic=20260511
+2026-05-13 07:38:27 | INFO    | Anchor=2:00 | Trigger=±$10.0 | TP=±$3.0 | SL=±$15.0
+2026-05-13 07:38:27 | INFO    | Lock step=$0.3 × 9 levels (2.70 max)
+2026-05-13 07:38:27 | INFO    | Safety: max_spread=$0.5, max_daily_loss=4.0%, EOD_cancel=23:00
+2026-05-13 07:38:27 | INFO    | ======================================================================
+2026-05-13 07:38:27 | INFO    | Connected | Account: 5050361102 | Broker: MetaQuotes-Demo
+2026-05-13 07:38:27 | INFO    | Balance: $49250.00 | Equity: $49250.00 | Mode: DEMO
+2026-05-13 07:38:27 | INFO    | Symbol: XAUUSD | Digits: 2 | Point: 0.01 | Stops level (min dist): 0 pts
+2026-05-13 07:38:27 | INFO    | ============================================================
+2026-05-13 07:38:27 | INFO    | STARTUP SANITY SUMMARY
+2026-05-13 07:38:27 | INFO    |   Account: 5050361102  Broker: MetaQuotes-Demo
+2026-05-13 07:38:27 | INFO    |   Equity: $49250.00  Balance: $49250.00
+2026-05-13 07:38:27 | INFO    |   Symbol: XAUUSD  Lot: 0.50
+2026-05-13 07:38:27 | INFO    |   Server time: 2026-05-13 05:08:28
+2026-05-13 07:38:27 | INFO    |   Bot positions: 0  Bot pendings: 0
+2026-05-13 07:38:27 | INFO    |   Non-bot positions (other magics): 0
+2026-05-13 07:38:27 | INFO    |   Non-bot pendings (other magics): 0
+2026-05-13 07:38:27 | INFO    | ============================================================
+2026-05-13 07:38:27 | INFO    | Startup recovery: checking for in-progress state...
+2026-05-13 07:38:27 | INFO    | Server time 2026-05-13 05:08:28 is past anchor — attempting late capture for 2026-05-13...
+2026-05-13 07:38:27 | INFO    | Fetched 288 M5 bars | range: 2026-05-12 03:10:00 → 2026-05-13 05:05:00 (broker time)
+2026-05-13 07:38:27 | INFO    | Anchor captured: $4716.96 at 2026-05-13 02:00:00
+2026-05-13 07:38:27 | WARNING | Late anchor recovery skipped: Anchor 4716.96, short TP 4703.96 | bid 4700.59 already past TP (window closed)
+2026-05-13 07:38:27 | INFO    | Next anchor: 2026-05-14 02:00:00 (broker time). Waiting 20.86 hr...
+2026-05-13 07:53:08 | INFO    | Bot stopped by user.
+2026-05-13 07:53:08 | INFO    | Disconnected from MT5.
+2026-05-13 07:53:14 | WARNING | Telegram enabled in config but token/chat_id missing — disabled.
+2026-05-13 07:53:14 | INFO    | ======================================================================
+2026-05-13 07:53:14 | INFO    | XAUUSD Anchor Bot starting
+2026-05-13 07:53:14 | INFO    | Symbol=XAUUSD | Lot=0.5 | Magic=20260511
+2026-05-13 07:53:14 | INFO    | Anchor=2:00 | Trigger=±$10.0 | TP=±$3.0 | SL=±$15.0
+2026-05-13 07:53:14 | INFO    | Lock step=$0.3 × 9 levels (2.70 max)
+2026-05-13 07:53:14 | INFO    | Safety: max_spread=$0.5, max_daily_loss=4.0%, EOD_cancel=23:00
+2026-05-13 07:53:14 | INFO    | ======================================================================
+2026-05-13 07:53:14 | INFO    | Connected | Account: 5050361102 | Broker: MetaQuotes-Demo
+2026-05-13 07:53:14 | INFO    | Balance: $49250.00 | Equity: $49250.00 | Mode: DEMO
+2026-05-13 07:53:14 | INFO    | Symbol: XAUUSD | Digits: 2 | Point: 0.01 | Stops level (min dist): 0 pts
+2026-05-13 07:53:14 | INFO    | ============================================================
+2026-05-13 07:53:14 | INFO    | STARTUP SANITY SUMMARY
+2026-05-13 07:53:14 | INFO    |   Account: 5050361102  Broker: MetaQuotes-Demo
+2026-05-13 07:53:14 | INFO    |   Equity: $49250.00  Balance: $49250.00
+2026-05-13 07:53:14 | INFO    |   Symbol: XAUUSD  Lot: 0.50
+2026-05-13 07:53:14 | INFO    |   Server time: 2026-05-13 05:23:15
+2026-05-13 07:53:14 | INFO    |   Bot positions: 0  Bot pendings: 0
+2026-05-13 07:53:14 | INFO    |   Non-bot positions (other magics): 0
+2026-05-13 07:53:14 | INFO    |   Non-bot pendings (other magics): 0
+2026-05-13 07:53:14 | INFO    | ============================================================
+2026-05-13 07:53:14 | INFO    | Status writer started (every 30s → status.json)
+2026-05-13 07:53:14 | INFO    | Startup recovery: checking for in-progress state...
+2026-05-13 07:53:14 | INFO    | Server time 2026-05-13 05:23:15 is past anchor — attempting late capture for 2026-05-13...
+2026-05-13 07:53:14 | INFO    | Fetched 288 M5 bars | range: 2026-05-12 03:25:00 → 2026-05-13 05:20:00 (broker time)
+2026-05-13 07:53:14 | INFO    | Anchor captured: $4716.96 at 2026-05-13 02:00:00
+2026-05-13 07:53:14 | WARNING | Late anchor recovery skipped: Anchor 4716.96, short TP 4703.96 | bid 4702.17 already past TP (window closed)
+2026-05-13 07:53:14 | INFO    | Next anchor: 2026-05-14 02:00:00 (broker time). Waiting 20.61 hr...
+2026-05-13 08:02:18 | INFO    | Bot stopped by user.
+2026-05-13 08:02:18 | INFO    | Disconnected from MT5.
+2026-05-13 08:02:20 | WARNING | Telegram enabled in config but token/chat_id missing — disabled.
+2026-05-13 08:02:20 | INFO    | ======================================================================
+2026-05-13 08:02:20 | INFO    | XAUUSD Anchor Bot starting
+2026-05-13 08:02:20 | INFO    | Symbol=XAUUSD | Lot=0.5 | Magic=20260511
+2026-05-13 08:02:20 | INFO    | Anchor=2:00 | Trigger=±$10.0 | TP=±$3.0 | SL=±$15.0
+2026-05-13 08:02:20 | INFO    | Lock step=$0.3 × 9 levels (2.70 max)
+2026-05-13 08:02:20 | INFO    | Safety: max_spread=$0.5, max_daily_loss=4.0%, EOD_cancel=23:00
+2026-05-13 08:02:20 | INFO    | ======================================================================
+2026-05-13 08:02:20 | INFO    | Connected | Account: 5050361102 | Broker: MetaQuotes-Demo
+2026-05-13 08:02:20 | INFO    | Balance: $49250.00 | Equity: $49250.00 | Mode: DEMO
+2026-05-13 08:02:20 | INFO    | Symbol: XAUUSD | Digits: 2 | Point: 0.01 | Stops level (min dist): 0 pts
+2026-05-13 08:02:20 | INFO    | ============================================================
+2026-05-13 08:02:20 | INFO    | STARTUP SANITY SUMMARY
+2026-05-13 08:02:20 | INFO    |   Account: 5050361102  Broker: MetaQuotes-Demo
+2026-05-13 08:02:20 | INFO    |   Equity: $49250.00  Balance: $49250.00
+2026-05-13 08:02:20 | INFO    |   Symbol: XAUUSD  Lot: 0.50
+2026-05-13 08:02:20 | INFO    |   Server time: 2026-05-13 05:32:21
+2026-05-13 08:02:20 | INFO    |   Bot positions: 0  Bot pendings: 0
+2026-05-13 08:02:20 | INFO    |   Non-bot positions (other magics): 0
+2026-05-13 08:02:20 | INFO    |   Non-bot pendings (other magics): 0
+2026-05-13 08:02:20 | INFO    | ============================================================
+2026-05-13 08:02:20 | INFO    | Status writer started (every 30s → status.json)
+2026-05-13 08:02:20 | INFO    | Startup recovery: checking for in-progress state...
+2026-05-13 08:02:20 | INFO    | Server time 2026-05-13 05:32:21 is past anchor — attempting late capture for 2026-05-13...
+2026-05-13 08:02:20 | INFO    | Fetched 288 M5 bars | range: 2026-05-12 03:35:00 → 2026-05-13 05:30:00 (broker time)
+2026-05-13 08:02:20 | INFO    | Anchor captured: $4716.96 at 2026-05-13 02:00:00
+2026-05-13 08:02:20 | WARNING | Late anchor recovery skipped: Anchor 4716.96, short TP 4703.96 | bid 4696.56 already past TP (window closed)
+2026-05-13 08:02:20 | INFO    | Next anchor: 2026-05-14 02:00:00 (broker time). Waiting 20.46 hr...
+2026-05-13 09:02:21 | INFO    | ⏳ Waiting for anchor at 2026-05-14 02:00:10 (broker). Remaining: 19h 27m | Server now: 2026-05-13 06:32:21
+2026-05-13 10:02:21 | INFO    | ⏳ Waiting for anchor at 2026-05-14 02:00:10 (broker). Remaining: 18h 27m | Server now: 2026-05-13 07:32:21
+2026-05-13 11:17:08 | INFO    | ⏳ Waiting for anchor at 2026-05-14 02:00:10 (broker). Remaining: 18h 09m | Server now: 2026-05-13 07:50:53
+2026-05-13 11:23:40 | INFO    | Bot stopped by user.
+2026-05-13 11:23:40 | INFO    | Disconnected from MT5.
+2026-05-13 11:23:43 | INFO    | Telegram notifications: ENABLED
+2026-05-13 11:23:43 | INFO    | ======================================================================
+2026-05-13 11:23:43 | INFO    | XAUUSD Anchor Bot starting
+2026-05-13 11:23:43 | INFO    | Symbol=XAUUSD | Lot=0.5 | Magic=20260511
+2026-05-13 11:23:43 | INFO    | Anchor=2:00 | Trigger=±$10.0 | TP=±$3.0 | SL=±$15.0
+2026-05-13 11:23:43 | INFO    | Lock step=$0.3 × 9 levels (2.70 max)
+2026-05-13 11:23:43 | INFO    | Safety: max_spread=$0.5, max_daily_loss=4.0%, EOD_cancel=23:00
+2026-05-13 11:23:43 | INFO    | ======================================================================
+2026-05-13 11:23:43 | INFO    | Connected | Account: 5050361102 | Broker: MetaQuotes-Demo
+2026-05-13 11:23:43 | INFO    | Balance: $49250.00 | Equity: $49250.00 | Mode: DEMO
+2026-05-13 11:23:43 | INFO    | Symbol: XAUUSD | Digits: 2 | Point: 0.01 | Stops level (min dist): 0 pts
+2026-05-13 11:23:43 | INFO    | ============================================================
+2026-05-13 11:23:43 | INFO    | STARTUP SANITY SUMMARY
+2026-05-13 11:23:43 | INFO    |   Account: 5050361102  Broker: MetaQuotes-Demo
+2026-05-13 11:23:43 | INFO    |   Equity: $49250.00  Balance: $49250.00
+2026-05-13 11:23:43 | INFO    |   Symbol: XAUUSD  Lot: 0.50
+2026-05-13 11:23:43 | INFO    |   Server time: 2026-05-13 08:53:34
+2026-05-13 11:23:43 | INFO    |   Bot positions: 0  Bot pendings: 0
+2026-05-13 11:23:43 | INFO    |   Non-bot positions (other magics): 0
+2026-05-13 11:23:43 | INFO    |   Non-bot pendings (other magics): 0
+2026-05-13 11:23:43 | INFO    | ============================================================
+2026-05-13 11:23:43 | INFO    | Status writer started (every 30s → status.json)
+2026-05-13 11:23:45 | INFO    | Telegram sent: 🚀 XAUUSD Anchor Bot started
+2026-05-13 11:23:45 | INFO    | Startup recovery: checking for in-progress state...
+2026-05-13 11:23:45 | INFO    | Server time 2026-05-13 08:53:45 is past anchor — attempting late capture for 2026-05-13...
+2026-05-13 11:23:45 | INFO    | Fetched 288 M5 bars | range: 2026-05-12 06:55:00 → 2026-05-13 08:50:00 (broker time)
+2026-05-13 11:23:45 | INFO    | Anchor captured: $4716.96 at 2026-05-13 02:00:00
+2026-05-13 11:23:45 | WARNING | Late anchor recovery skipped: Anchor 4716.96, short TP 4703.96 | bid 4699.39 already past TP (window closed)
+2026-05-13 11:23:46 | INFO    | Telegram sent: ⏭ Late anchor skipped
+2026-05-13 11:23:46 | INFO    | Next anchor: 2026-05-14 02:00:00 (broker time). Waiting 17.10 hr...
+2026-05-13 11:27:08 | INFO    | Bot stopped by user.
+2026-05-13 11:27:13 | INFO    | Telegram notifications: ENABLED
+2026-05-13 11:27:13 | INFO    | ======================================================================
+2026-05-13 11:27:13 | INFO    | XAUUSD Anchor Bot starting
+2026-05-13 11:27:13 | INFO    | Symbol=XAUUSD | Lot=0.5 | Magic=20260511
+2026-05-13 11:27:13 | INFO    | Anchor=2:00 | Trigger=±$10.0 | TP=±$3.0 | SL=±$15.0
+2026-05-13 11:27:13 | INFO    | Lock step=$0.3 × 9 levels (2.70 max)
+2026-05-13 11:27:13 | INFO    | Safety: max_spread=$0.5, max_daily_loss=4.0%, EOD_cancel=23:00
+2026-05-13 11:27:13 | INFO    | ======================================================================
+2026-05-13 11:27:13 | INFO    | Connected | Account: 5050361102 | Broker: MetaQuotes-Demo
+2026-05-13 11:27:13 | INFO    | Balance: $49250.00 | Equity: $49250.00 | Mode: DEMO
+2026-05-13 11:27:13 | INFO    | Symbol: XAUUSD | Digits: 2 | Point: 0.01 | Stops level (min dist): 0 pts
+2026-05-13 11:27:13 | INFO    | ============================================================
+2026-05-13 11:27:13 | INFO    | STARTUP SANITY SUMMARY
+2026-05-13 11:27:13 | INFO    |   Account: 5050361102  Broker: MetaQuotes-Demo
+2026-05-13 11:27:13 | INFO    |   Equity: $49250.00  Balance: $49250.00
+2026-05-13 11:27:13 | INFO    |   Symbol: XAUUSD  Lot: 0.50
+2026-05-13 11:27:13 | INFO    |   Server time: 2026-05-13 08:57:14
+2026-05-13 11:27:13 | INFO    |   Bot positions: 0  Bot pendings: 0
+2026-05-13 11:27:13 | INFO    |   Non-bot positions (other magics): 0
+2026-05-13 11:27:13 | INFO    |   Non-bot pendings (other magics): 0
+2026-05-13 11:27:13 | INFO    | ============================================================
+2026-05-13 11:27:13 | INFO    | Status writer started (every 30s → status.json)
+2026-05-13 11:27:18 | INFO    | Telegram notifications: ENABLED
+2026-05-13 11:27:18 | INFO    | ======================================================================
+2026-05-13 11:27:18 | INFO    | XAUUSD Anchor Bot starting
+2026-05-13 11:27:18 | INFO    | Symbol=XAUUSD | Lot=0.5 | Magic=20260511
+2026-05-13 11:27:18 | INFO    | Anchor=2:00 | Trigger=±$10.0 | TP=±$3.0 | SL=±$15.0
+2026-05-13 11:27:18 | INFO    | Lock step=$0.3 × 9 levels (2.70 max)
+2026-05-13 11:27:18 | INFO    | Safety: max_spread=$0.5, max_daily_loss=4.0%, EOD_cancel=23:00
+2026-05-13 11:27:18 | INFO    | ======================================================================
+2026-05-13 11:27:18 | INFO    | Connected | Account: 5050361102 | Broker: MetaQuotes-Demo
+2026-05-13 11:27:18 | INFO    | Balance: $49250.00 | Equity: $49250.00 | Mode: DEMO
+2026-05-13 11:27:18 | INFO    | Symbol: XAUUSD | Digits: 2 | Point: 0.01 | Stops level (min dist): 0 pts
+2026-05-13 11:27:18 | INFO    | ============================================================
+2026-05-13 11:27:18 | INFO    | STARTUP SANITY SUMMARY
+2026-05-13 11:27:18 | INFO    |   Account: 5050361102  Broker: MetaQuotes-Demo
+2026-05-13 11:27:18 | INFO    |   Equity: $49250.00  Balance: $49250.00
+2026-05-13 11:27:18 | INFO    |   Symbol: XAUUSD  Lot: 0.50
+2026-05-13 11:27:18 | INFO    |   Server time: 2026-05-13 08:57:18
+2026-05-13 11:27:18 | INFO    |   Bot positions: 0  Bot pendings: 0
+2026-05-13 11:27:18 | INFO    |   Non-bot positions (other magics): 0
+2026-05-13 11:27:18 | INFO    |   Non-bot pendings (other magics): 0
+2026-05-13 11:27:18 | INFO    | ============================================================
+2026-05-13 11:27:18 | INFO    | Status writer started (every 30s → status.json)
+2026-05-13 11:27:19 | INFO    | Telegram sent: 🚀 XAUUSD Anchor Bot started
+2026-05-13 11:27:19 | INFO    | Startup recovery: checking for in-progress state...
+2026-05-13 11:27:19 | INFO    | Server time 2026-05-13 08:57:20 is past anchor — attempting late capture for 2026-05-13...
+2026-05-13 11:27:19 | INFO    | Fetched 288 M5 bars | range: 2026-05-12 07:00:00 → 2026-05-13 08:55:00 (broker time)
+2026-05-13 11:27:19 | INFO    | Anchor captured: $4716.96 at 2026-05-13 02:00:00
+2026-05-13 11:27:19 | WARNING | Late anchor recovery skipped: Anchor 4716.96, short TP 4703.96 | bid 4701.10 already past TP (window closed)
+2026-05-13 11:27:21 | INFO    | Telegram sent: ⏭ Late anchor skipped
+2026-05-13 11:27:21 | INFO    | Next anchor: 2026-05-14 02:00:00 (broker time). Waiting 17.04 hr...
+2026-05-13 11:27:24 | INFO    | Telegram notifications: ENABLED
+2026-05-13 11:27:24 | INFO    | ======================================================================
+2026-05-13 11:27:24 | INFO    | XAUUSD Anchor Bot starting
+2026-05-13 11:27:24 | INFO    | Symbol=XAUUSD | Lot=0.5 | Magic=20260511
+2026-05-13 11:27:24 | INFO    | Anchor=2:00 | Trigger=±$10.0 | TP=±$3.0 | SL=±$15.0
+2026-05-13 11:27:24 | INFO    | Lock step=$0.3 × 9 levels (2.70 max)
+2026-05-13 11:27:24 | INFO    | Safety: max_spread=$0.5, max_daily_loss=4.0%, EOD_cancel=23:00
+2026-05-13 11:27:24 | INFO    | ======================================================================
+2026-05-13 11:27:24 | INFO    | Connected | Account: 5050361102 | Broker: MetaQuotes-Demo
+2026-05-13 11:27:24 | INFO    | Balance: $49250.00 | Equity: $49250.00 | Mode: DEMO
+2026-05-13 11:27:24 | INFO    | Symbol: XAUUSD | Digits: 2 | Point: 0.01 | Stops level (min dist): 0 pts
+2026-05-13 11:27:24 | INFO    | ============================================================
+2026-05-13 11:27:24 | INFO    | STARTUP SANITY SUMMARY
+2026-05-13 11:27:24 | INFO    |   Account: 5050361102  Broker: MetaQuotes-Demo
+2026-05-13 11:27:24 | INFO    |   Equity: $49250.00  Balance: $49250.00
+2026-05-13 11:27:24 | INFO    |   Symbol: XAUUSD  Lot: 0.50
+2026-05-13 11:27:24 | INFO    |   Server time: 2026-05-13 08:57:25
+2026-05-13 11:27:24 | INFO    |   Bot positions: 0  Bot pendings: 0
+2026-05-13 11:27:24 | INFO    |   Non-bot positions (other magics): 0
+2026-05-13 11:27:24 | INFO    |   Non-bot pendings (other magics): 0
+2026-05-13 11:27:24 | INFO    | ============================================================
+2026-05-13 11:27:24 | INFO    | Status writer started (every 30s → status.json)
+2026-05-13 11:27:26 | INFO    | Telegram sent: 🚀 XAUUSD Anchor Bot started
+2026-05-13 11:27:26 | INFO    | Startup recovery: checking for in-progress state...
+2026-05-13 11:27:26 | INFO    | Server time 2026-05-13 08:57:27 is past anchor — attempting late capture for 2026-05-13...
+2026-05-13 11:27:26 | INFO    | Fetched 288 M5 bars | range: 2026-05-12 07:00:00 → 2026-05-13 08:55:00 (broker time)
+2026-05-13 11:27:26 | INFO    | Anchor captured: $4716.96 at 2026-05-13 02:00:00
+2026-05-13 11:27:26 | WARNING | Late anchor recovery skipped: Anchor 4716.96, short TP 4703.96 | bid 4701.11 already past TP (window closed)
+2026-05-13 11:27:28 | INFO    | Telegram sent: ⏭ Late anchor skipped
+2026-05-13 11:27:28 | INFO    | Next anchor: 2026-05-14 02:00:00 (broker time). Waiting 17.04 hr...
+2026-05-13 11:27:32 | INFO    | Telegram notifications: ENABLED
+2026-05-13 11:27:32 | INFO    | ======================================================================
+2026-05-13 11:27:32 | INFO    | XAUUSD Anchor Bot starting
+2026-05-13 11:27:32 | INFO    | Symbol=XAUUSD | Lot=0.5 | Magic=20260511
+2026-05-13 11:27:32 | INFO    | Anchor=2:00 | Trigger=±$10.0 | TP=±$3.0 | SL=±$15.0
+2026-05-13 11:27:32 | INFO    | Lock step=$0.3 × 9 levels (2.70 max)
+2026-05-13 11:27:32 | INFO    | Safety: max_spread=$0.5, max_daily_loss=4.0%, EOD_cancel=23:00
+2026-05-13 11:27:32 | INFO    | ======================================================================
+2026-05-13 11:27:32 | INFO    | Connected | Account: 5050361102 | Broker: MetaQuotes-Demo
+2026-05-13 11:27:32 | INFO    | Balance: $49250.00 | Equity: $49250.00 | Mode: DEMO
+2026-05-13 11:27:32 | INFO    | Symbol: XAUUSD | Digits: 2 | Point: 0.01 | Stops level (min dist): 0 pts
+2026-05-13 11:27:32 | INFO    | ============================================================
+2026-05-13 11:27:32 | INFO    | STARTUP SANITY SUMMARY
+2026-05-13 11:27:32 | INFO    |   Account: 5050361102  Broker: MetaQuotes-Demo
+2026-05-13 11:27:32 | INFO    |   Equity: $49250.00  Balance: $49250.00
+2026-05-13 11:27:32 | INFO    |   Symbol: XAUUSD  Lot: 0.50
+2026-05-13 11:27:32 | INFO    |   Server time: 2026-05-13 08:57:32
+2026-05-13 11:27:32 | INFO    |   Bot positions: 0  Bot pendings: 0
+2026-05-13 11:27:32 | INFO    |   Non-bot positions (other magics): 0
+2026-05-13 11:27:32 | INFO    |   Non-bot pendings (other magics): 0
+2026-05-13 11:27:32 | INFO    | ============================================================
+2026-05-13 11:27:32 | INFO    | Status writer started (every 30s → status.json)
+2026-05-13 11:27:34 | INFO    | Telegram sent: 🚀 XAUUSD Anchor Bot started
+2026-05-13 11:27:34 | INFO    | Startup recovery: checking for in-progress state...
+2026-05-13 11:27:34 | INFO    | Server time 2026-05-13 08:57:35 is past anchor — attempting late capture for 2026-05-13...
+2026-05-13 11:27:34 | INFO    | Fetched 288 M5 bars | range: 2026-05-12 07:00:00 → 2026-05-13 08:55:00 (broker time)
+2026-05-13 11:27:34 | INFO    | Anchor captured: $4716.96 at 2026-05-13 02:00:00
+2026-05-13 11:27:34 | WARNING | Late anchor recovery skipped: Anchor 4716.96, short TP 4703.96 | bid 4701.10 already past TP (window closed)
+2026-05-13 11:27:37 | INFO    | Telegram notifications: ENABLED
+2026-05-13 11:27:37 | INFO    | ======================================================================
+2026-05-13 11:27:37 | INFO    | XAUUSD Anchor Bot starting
+2026-05-13 11:27:37 | INFO    | Symbol=XAUUSD | Lot=0.5 | Magic=20260511
+2026-05-13 11:27:37 | INFO    | Anchor=2:00 | Trigger=±$10.0 | TP=±$3.0 | SL=±$15.0
+2026-05-13 11:27:37 | INFO    | Lock step=$0.3 × 9 levels (2.70 max)
+2026-05-13 11:27:37 | INFO    | Safety: max_spread=$0.5, max_daily_loss=4.0%, EOD_cancel=23:00
+2026-05-13 11:27:37 | INFO    | ======================================================================
+2026-05-13 11:27:37 | INFO    | Connected | Account: 5050361102 | Broker: MetaQuotes-Demo
+2026-05-13 11:27:37 | INFO    | Balance: $49250.00 | Equity: $49250.00 | Mode: DEMO
+2026-05-13 11:27:37 | INFO    | Symbol: XAUUSD | Digits: 2 | Point: 0.01 | Stops level (min dist): 0 pts
+2026-05-13 11:27:37 | INFO    | ============================================================
+2026-05-13 11:27:37 | INFO    | STARTUP SANITY SUMMARY
+2026-05-13 11:27:37 | INFO    |   Account: 5050361102  Broker: MetaQuotes-Demo
+2026-05-13 11:27:37 | INFO    |   Equity: $49250.00  Balance: $49250.00
+2026-05-13 11:27:37 | INFO    |   Symbol: XAUUSD  Lot: 0.50
+2026-05-13 11:27:37 | INFO    |   Server time: 2026-05-13 08:57:38
+2026-05-13 11:27:37 | INFO    |   Bot positions: 0  Bot pendings: 0
+2026-05-13 11:27:37 | INFO    |   Non-bot positions (other magics): 0
+2026-05-13 11:27:37 | INFO    |   Non-bot pendings (other magics): 0
+2026-05-13 11:27:37 | INFO    | ============================================================
+2026-05-13 11:27:37 | INFO    | Status writer started (every 30s → status.json)
+2026-05-13 11:27:39 | INFO    | Telegram sent: 🚀 XAUUSD Anchor Bot started
+2026-05-13 11:27:39 | INFO    | Startup recovery: checking for in-progress state...
+2026-05-13 11:27:39 | INFO    | Server time 2026-05-13 08:57:39 is past anchor — attempting late capture for 2026-05-13...
+2026-05-13 11:27:39 | INFO    | Fetched 288 M5 bars | range: 2026-05-12 07:00:00 → 2026-05-13 08:55:00 (broker time)
+2026-05-13 11:27:39 | INFO    | Anchor captured: $4716.96 at 2026-05-13 02:00:00
+2026-05-13 11:27:39 | WARNING | Late anchor recovery skipped: Anchor 4716.96, short TP 4703.96 | bid 4700.89 already past TP (window closed)
+2026-05-13 11:27:40 | INFO    | Telegram sent: ⏭ Late anchor skipped
+2026-05-13 11:27:40 | INFO    | Next anchor: 2026-05-14 02:00:00 (broker time). Waiting 17.04 hr...
