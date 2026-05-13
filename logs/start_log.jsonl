@@ -1,0 +1,18 @@
+{"ist_time": "2026-05-12 09:49:14 IST", "server_time": "2026-05-12 07:19:15", "event": "BOT_STARTED", "account": 5050361102, "broker": "MetaQuotes-Demo", "mode": "DEMO", "symbol": "XAUUSD", "lot": 0.5}
+{"ist_time": "2026-05-12 09:49:14 IST", "server_time": "2026-05-12 07:19:15", "event": "LATE_RECOVERY", "status": "skipped", "anchor": 4750.87, "reason": "Anchor 4750.87, short TP 4737.87 | bid 4726.67 already past TP (window closed)"}
+{"ist_time": "2026-05-12 09:50:32 IST", "server_time": "2026-05-12 07:20:33", "event": "BOT_STOPPED", "reason": "keyboard_interrupt"}
+{"ist_time": "2026-05-12 09:50:34 IST", "server_time": "2026-05-12 07:20:35", "event": "BOT_STARTED", "account": 5050361102, "broker": "MetaQuotes-Demo", "mode": "DEMO", "symbol": "XAUUSD", "lot": 0.5}
+{"ist_time": "2026-05-12 09:50:34 IST", "server_time": "2026-05-12 07:20:35", "event": "LATE_RECOVERY", "status": "skipped", "anchor": 4750.87, "reason": "Anchor 4750.87, short TP 4737.87 | bid 4726.74 already past TP (window closed)"}
+{"ist_time": "2026-05-12 09:54:31 IST", "server_time": "2026-05-12 07:24:31", "event": "BOT_STOPPED", "reason": "keyboard_interrupt"}
+{"ist_time": "2026-05-12 09:54:33 IST", "server_time": "2026-05-12 07:24:33", "event": "BOT_STARTED", "account": 5050361102, "broker": "MetaQuotes-Demo", "mode": "DEMO", "symbol": "XAUUSD", "lot": 0.5}
+{"ist_time": "2026-05-12 09:54:35 IST", "server_time": "2026-05-12 07:24:33", "event": "LATE_RECOVERY", "status": "skipped", "anchor": 4750.87, "reason": "Anchor 4750.87, short TP 4737.87 | bid 4724.88 already past TP (window closed)"}
+{"ist_time": "2026-05-12 23:08:53 IST", "server_time": "2026-05-12 20:38:54", "event": "BOT_STOPPED", "reason": "keyboard_interrupt"}
+{"ist_time": "2026-05-12 23:08:56 IST", "server_time": "2026-05-12 20:38:57", "event": "BOT_STARTED", "account": 5050361102, "broker": "MetaQuotes-Demo", "mode": "DEMO", "symbol": "XAUUSD", "lot": 0.5}
+{"ist_time": "2026-05-12 23:08:58 IST", "server_time": "2026-05-12 20:38:58", "event": "LATE_RECOVERY", "status": "skipped", "anchor": 4750.87, "reason": "Anchor 4750.87, short TP 4737.87 | bid 4677.96 already past TP (window closed)"}
+{"ist_time": "2026-05-13 04:30:09 IST", "server_time": "2026-05-13 02:00:10", "event": "ANCHOR_CAPTURED", "anchor_time_broker": "2026-05-13 02:00:00", "anchor_price": 4716.96, "buy_stop": 4726.96, "sell_stop": 4706.96, "buy_sl": 4711.96, "buy_tp": 4729.96, "sell_sl": 4721.96, "sell_tp": 4703.96}
+{"ist_time": "2026-05-13 04:30:11 IST", "server_time": "2026-05-13 02:00:11", "event": "ORDERS_PLACED", "buy_ticket": 56624951796, "sell_ticket": 56624951808}
+{"ist_time": "2026-05-13 05:35:23 IST", "server_time": "2026-05-13 03:05:23", "event": "ENTRY_FILLED", "side": "LONG", "ticket": 56624951796, "planned_price": 4726.96, "entry_price": 4726.96, "slippage": 0.0}
+{"ist_time": "2026-05-13 06:30:15 IST", "server_time": "2026-05-13 04:00:16", "event": "POSITION_CLOSED", "side": "LONG", "ticket": 56624951796, "exit_price": null, "pnl": null, "reason": "unknown (no deal in history)"}
+{"ist_time": "2026-05-13 07:25:51 IST", "server_time": "2026-05-13 04:55:51", "event": "BOT_STOPPED", "reason": "keyboard_interrupt"}
+{"ist_time": "2026-05-13 07:25:53 IST", "server_time": "2026-05-13 04:55:54", "event": "BOT_STARTED", "account": 5050361102, "broker": "MetaQuotes-Demo", "mode": "DEMO", "symbol": "XAUUSD", "lot": 0.5}
+{"ist_time": "2026-05-13 07:25:54 IST", "server_time": "2026-05-13 04:55:55", "event": "LATE_RECOVERY", "status": "skipped", "anchor": 4716.96, "reason": "Anchor 4716.96, short trigger 4706.96 | bid 4706.53 past trigger (mid-breakout, conservative skip)"}
