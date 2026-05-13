@@ -23,6 +23,7 @@ from core.safety import (
     validate_symbol_tradeability,
 )
 from core.start_log import (
+    get_weekly_pnl,
     record_anchor_captured,
     record_day_skipped,
     record_entry_filled,
@@ -185,6 +186,14 @@ def manage_active_position(
     # than loop forever. Reset to 0 on each successful modify.
     trail_modify_failures = 0
     TRAIL_MODIFY_MAX_FAILURES = 5
+
+    # ----- RESCUE HEDGE -----
+    # Optional opposite-direction market position triggered when original goes
+    # adverse by RESCUE_TRIGGER_ADVERSE. Manages independently with same trail.
+    # Lazy-init: created after we know active_side + entry_price.
+    rescue_mgr = None
+    original_closed = False     # set True when original position closes
+    original_close_handled = False  # ensures we record close + telemetry once
 
     if recovered_position is None:
         log.info("Watching for entry trigger...")
@@ -426,39 +435,75 @@ def manage_active_position(
             # ---------------------------------------------------------------
             # 5. Position open → check if still alive
             # ---------------------------------------------------------------
-            positions = get_bot_positions()
-            if positions is None:
-                # MT5 query failed — don't conclude close, retry
-                time_module.sleep(config.POLL_SECONDS)
-                continue
-            if len(positions) > 1:
-                msg = (
-                    f"Multiple bot positions detected during management "
-                    f"({len(positions)}). Halting for manual review."
-                )
-                log.error(msg)
-                tg.send_message(
-                    f"🚨 MULTIPLE POSITIONS DURING MANAGEMENT\n"
-                    f"Count: {len(positions)}\n"
-                    f"Active ticket: {active_position.ticket}\n"
-                    f"Bot is halting — manual review required."
-                )
-                raise HaltBot(msg)
-            still_open = any(p.ticket == active_position.ticket for p in positions)
-            if not still_open:
-                _record_close_to_start_log(active_position.ticket, active_side, entry_price)
-                send_close_telemetry(
-                    tg, active_position.ticket, active_side,
-                    entry_price, current_lock_idx,
-                )
-                log.info(f"✓ Position {active_position.ticket} CLOSED")
-                return
+            if not original_closed:
+                positions = get_bot_positions()
+                if positions is None:
+                    # MT5 query failed — don't conclude close, retry
+                    time_module.sleep(config.POLL_SECONDS)
+                    continue
+                # If rescue has fired, expect up to 2 bot positions (original + rescue).
+                # Without rescue active, more than 1 is still a halt condition.
+                max_allowed = 2 if (rescue_mgr is not None and rescue_mgr.state is not None) else 1
+                if len(positions) > max_allowed:
+                    msg = (
+                        f"Multiple bot positions detected during management "
+                        f"({len(positions)} > max {max_allowed}). Halting for manual review."
+                    )
+                    log.error(msg)
+                    tg.send_message(
+                        f"🚨 MULTIPLE POSITIONS DURING MANAGEMENT\n"
+                        f"Count: {len(positions)} (allowed: {max_allowed})\n"
+                        f"Active ticket: {active_position.ticket}\n"
+                        f"Bot is halting — manual review required."
+                    )
+                    raise HaltBot(msg)
+                still_open = any(p.ticket == active_position.ticket for p in positions)
+                if not still_open:
+                    if not original_close_handled:
+                        _record_close_to_start_log(active_position.ticket, active_side, entry_price)
+                        send_close_telemetry(
+                            tg, active_position.ticket, active_side,
+                            entry_price, current_lock_idx,
+                        )
+                        log.info(f"✓ Position {active_position.ticket} CLOSED")
+                        original_close_handled = True
+                    original_closed = True
+                    if rescue_mgr is not None:
+                        rescue_mgr.original_has_closed()
+                    # If rescue is also done (or never fired and not enabled), exit.
+                    if rescue_mgr is None or rescue_mgr.is_done():
+                        return
+                    # Else: keep looping to manage rescue
+                    log.info("Original closed — continuing loop to manage rescue.")
 
             # ---------------------------------------------------------------
             # 6. Trail SL — using ACTUAL filled entry_price
             # ---------------------------------------------------------------
             tick = get_tick()
             if tick is None:
+                time_module.sleep(config.POLL_SECONDS)
+                continue
+
+            # Lazy-instantiate rescue manager once we know the active side/entry.
+            # Only created if rescue is enabled and not in recovery flow.
+            if (rescue_mgr is None
+                    and recovered_position is None
+                    and active_position is not None
+                    and entry_price is not None
+                    and getattr(config, "RESCUE_ENABLED", False)):
+                from strategy.rescue import RescueManager
+                rescue_mgr = RescueManager(active_side, entry_price, levels, tg)
+                log.info(
+                    f"RescueManager initialized for {active_side} @ {entry_price} "
+                    f"(trigger at adverse ${config.RESCUE_TRIGGER_ADVERSE})"
+                )
+
+            # Skip trail logic if original is already closed (rescue keeps loop alive)
+            if original_closed:
+                if rescue_mgr is not None:
+                    rescue_mgr.tick(None, tick)
+                    if rescue_mgr.is_done():
+                        return
                 time_module.sleep(config.POLL_SECONDS)
                 continue
 
@@ -478,14 +523,22 @@ def manage_active_position(
                         log.info(
                             f"Position {active_position.ticket} closed during trail update."
                         )
-                        _record_close_to_start_log(
-                            active_position.ticket, active_side, entry_price
-                        )
-                        send_close_telemetry(
-                            tg, active_position.ticket, active_side,
-                            entry_price, current_lock_idx,
-                        )
-                        return
+                        if not original_close_handled:
+                            _record_close_to_start_log(
+                                active_position.ticket, active_side, entry_price
+                            )
+                            send_close_telemetry(
+                                tg, active_position.ticket, active_side,
+                                entry_price, current_lock_idx,
+                            )
+                            original_close_handled = True
+                        original_closed = True
+                        if rescue_mgr is not None:
+                            rescue_mgr.original_has_closed()
+                        if rescue_mgr is None or rescue_mgr.is_done():
+                            return
+                        # else keep loop alive for rescue
+                        continue
                     active_position = fresh[0]
                     ok = modify_position_sl(
                         active_position.ticket, new_sl, active_position.tp
@@ -547,6 +600,12 @@ def manage_active_position(
                         entry_price, lock_step_idx=current_lock_idx,
                     )
                     last_heartbeat_ts = time_module.time()
+
+            # ---------------------------------------------------------------
+            # 8. Rescue tick — check trigger, manage rescue if open
+            # ---------------------------------------------------------------
+            if rescue_mgr is not None:
+                rescue_mgr.tick(active_position, tick)
 
             time_module.sleep(config.POLL_SECONDS)
 
@@ -965,6 +1024,42 @@ def run_day(tg: TelegramNotifier) -> None:
                            limit_pct=config.MAX_DAILY_LOSS_PCT)
         time_module.sleep(3600)
         return
+
+    # ----- Weekly profit lock ("dam for profits") -----
+    # If cumulative bot PnL for the current ISO week >= target, skip the day.
+    # Lock resets automatically every Monday (new ISO week).
+    # Target reads from runtime override first (set via /setweekly), then config.
+    if getattr(config, "WEEKLY_PROFIT_LOCK_ENABLED", False):
+        from core.runtime_config import get as rt_get
+        weekly_pnl = get_weekly_pnl(now)
+        target = float(rt_get("WEEKLY_PROFIT_LOCK_USD", 0.0))
+        iso_year, iso_week, iso_day = now.isocalendar()
+        if weekly_pnl >= target:
+            log.info(
+                f"🔒 Weekly profit lock active. Weekly PnL ${weekly_pnl:.2f} "
+                f">= target ${target:.2f}. Skipping day."
+            )
+            tg.send_message(
+                f"🔒 Weekly profit lock — day skipped\n"
+                f"Week: {iso_year}-W{iso_week:02d}\n"
+                f"Weekly PnL: ${weekly_pnl:.2f}\n"
+                f"Target:     ${target:.2f}\n"
+                f"Bot resumes Monday (new ISO week)."
+            )
+            record_day_skipped(
+                "weekly_profit_lock",
+                weekly_pnl=weekly_pnl,
+                target_usd=target,
+                iso_week=f"{iso_year}-W{iso_week:02d}",
+            )
+            # Sleep until next anchor day. wait_until handles the long wait.
+            time_module.sleep(3600)
+            return
+        else:
+            log.info(
+                f"Weekly lock check: cumulative ${weekly_pnl:.2f} of target "
+                f"${target:.2f} (week {iso_year}-W{iso_week:02d}). Trading."
+            )
 
     anchor = capture_anchor_price(now.date())
     if anchor is None:

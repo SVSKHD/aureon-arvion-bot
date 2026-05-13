@@ -322,3 +322,69 @@ def cancel_bot_pending_orders() -> Optional[int]:
         )
         return None
     return cancelled
+
+
+def open_rescue_market_position(
+    side: str,
+    lot: float,
+    sl: float,
+    tp: float,
+) -> Optional[int]:
+    """
+    Open a rescue position via MARKET order.
+
+    Uses comment "{COMMENT}_RESCUE" to distinguish from original positions
+    (which use "{COMMENT}_LONG" or "{COMMENT}_SHORT"). Same MAGIC so it's
+    still recognized as a bot position.
+
+    Returns position ticket on success, None on failure.
+    """
+    tick = mt5.symbol_info_tick(config.SYMBOL)
+    if tick is None:
+        log.error("Rescue open: cannot get tick to determine entry price.")
+        return None
+
+    if side == "LONG":
+        order_type = mt5.ORDER_TYPE_BUY
+        price = float(tick.ask)
+    elif side == "SHORT":
+        order_type = mt5.ORDER_TYPE_SELL
+        price = float(tick.bid)
+    else:
+        log.error(f"Rescue open: invalid side '{side}'")
+        return None
+
+    req = {
+        "action": mt5.TRADE_ACTION_DEAL,
+        "symbol": config.SYMBOL,
+        "volume": float(lot),
+        "type": order_type,
+        "price": price,
+        "sl": sl,
+        "tp": tp,
+        "deviation": 30,  # allow some slippage
+        "magic": config.MAGIC,
+        "comment": f"{config.COMMENT}_RESCUE",
+        "type_filling": mt5.ORDER_FILLING_IOC,
+    }
+    res = mt5.order_send(req)
+    if res is None:
+        log.error(f"Rescue order_send returned None: {mt5.last_error()}")
+        return None
+
+    if res.retcode != mt5.TRADE_RETCODE_DONE:
+        log.error(
+            f"Rescue market order FAILED: retcode={res.retcode} "
+            f"comment={res.comment}"
+        )
+        return None
+
+    log.info(
+        f"Rescue market order placed: {side} {lot} @ {res.price} "
+        f"(order={res.order}, deal={res.deal})"
+    )
+
+    # res.order is the order ticket; for market orders, the position
+    # ticket equals the order ticket on most brokers but use position
+    # ticket if available
+    return int(res.order)

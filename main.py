@@ -24,6 +24,7 @@ from core.start_log import (
     record_bot_started,
     record_bot_stopped,
 )
+from core.status_file import start_status_writer
 from core.telegram_notifier import TelegramNotifier
 from strategy.day_runner import manage_active_position, run_day
 from strategy.orders import build_order_prices
@@ -138,6 +139,9 @@ def main() -> None:
             symbol=config.SYMBOL,
             lot=config.LOT_SIZE,
         )
+        # Background thread writes logs/status.json every 30s. The watchdog
+        # supervisor reads this file to respond to /status commands.
+        start_status_writer(interval_sec=30)
         tg.send_message(
             f"🚀 XAUUSD Anchor Bot started\n"
             f"Account: {info.login}\n"

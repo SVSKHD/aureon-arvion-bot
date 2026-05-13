@@ -245,3 +245,71 @@ def record_pendings_resumed(buy_ticket: Optional[int], sell_ticket: Optional[int
         "sell_ticket": sell_ticket,
         "anchor_inferred": anchor,
     })
+
+
+def get_weekly_pnl(server_now: datetime) -> float:
+    """
+    Sum the PnL of POSITION_CLOSED events for the CURRENT ISO week.
+
+    Uses server_now's ISO week (Monday-Sunday). A trade is counted if its
+    server_time falls in the same (year, week) as server_now.
+
+    Returns total PnL in USD. Returns 0.0 if log file missing or no closes
+    this week. Trades with pnl=null (history lookup failed) are skipped.
+
+    Used by weekly profit lock to decide whether to skip a trading day.
+    """
+    if not _LOG_PATH.exists():
+        return 0.0
+
+    target_iso = server_now.isocalendar()
+    target_year = target_iso[0]
+    target_week = target_iso[1]
+
+    total = 0.0
+    try:
+        with open(_LOG_PATH, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    evt = json.loads(line)
+                except Exception:
+                    continue
+                if evt.get("event") != "POSITION_CLOSED":
+                    continue
+                pnl = evt.get("pnl")
+                if pnl is None:
+                    continue
+                stime = evt.get("server_time")
+                if not stime:
+                    continue
+                try:
+                    dt = datetime.strptime(stime, "%Y-%m-%d %H:%M:%S")
+                except ValueError:
+                    continue
+                iso = dt.isocalendar()
+                if iso[0] == target_year and iso[1] == target_week:
+                    total += float(pnl)
+    except Exception as e:
+        log.warning(f"get_weekly_pnl failed: {e}")
+        return 0.0
+
+    return round(total, 2)
+
+
+
+def record_rescue_triggered(**kwargs) -> None:
+    """RESCUE_TRIGGERED — adverse threshold reached, market order placed."""
+    _write_event("RESCUE_TRIGGERED", **kwargs)
+
+
+def record_rescue_filled(**kwargs) -> None:
+    """RESCUE_FILLED — rescue market order filled, position open."""
+    _write_event("RESCUE_FILLED", **kwargs)
+
+
+def record_rescue_closed(**kwargs) -> None:
+    """RESCUE_CLOSED — rescue position closed (TP/SL/Trail/BE)."""
+    _write_event("RESCUE_CLOSED", **kwargs)

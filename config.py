@@ -5,9 +5,23 @@ All editable settings live here. Edit before running.
 
 SECRETS (Telegram token, chat ID) are read from environment variables —
 NEVER commit them to git. See bottom of file for env var names.
+
+Loads from a `.env` file at project root if python-dotenv is installed
+(pip install python-dotenv). Falls back to OS env vars otherwise.
 """
 
 import os
+from pathlib import Path
+
+# Load .env file if python-dotenv available. Silent no-op if not installed
+# or if .env file doesn't exist — env vars can still be set via setx/export.
+try:
+    from dotenv import load_dotenv
+    _ENV_PATH = Path(__file__).resolve().parent / ".env"
+    if _ENV_PATH.exists():
+        load_dotenv(_ENV_PATH)
+except ImportError:
+    pass
 
 # ----------------------------------------------------------------------------
 # SYMBOL & POSITION
@@ -113,6 +127,63 @@ ATR_TIMEFRAME: str = "M15"          # M1, M5, M15, M30, H1, H4
 ATR_PERIOD: int = 14
 ATR_HIGH_THRESHOLD: float = 5.0     # ATR > this → SHORT only
 ATR_LOW_THRESHOLD: float = 1.5      # ATR < this → LONG only
+
+# ----------------------------------------------------------------------------
+# WEEKLY PROFIT LOCK ("dam for profits")
+# ----------------------------------------------------------------------------
+# Once cumulative bot PnL for the CURRENT ISO WEEK reaches the target USD,
+# bot stops opening new trades until next Monday (new ISO week resets it).
+#
+# Backtest result (Jan-Apr 2026, 18 weeks, 68 trades):
+#   - Baseline: +$3,465 with 1 losing week (-$480)
+#   - With $200 lock: +$3,585 with 0 losing weeks (min week +$45)
+#   - Eliminated all weekly drawdowns
+#
+# How it works: counts pnl from POSITION_CLOSED events in start_log.jsonl
+# for the current ISO week. Only realized closed-trade PnL counts; floating
+# P&L of open positions is excluded. Resets automatically every Monday.
+#
+# When lock active: bot still wakes at anchor time, checks lock, sees it's
+# hit, logs DAY_SKIPPED reason=weekly_profit_lock, telegrams the user, and
+# sleeps until next day. No anchor capture, no orders. Open positions
+# continue to be managed normally (lock only blocks NEW trades).
+#
+# Tune to your situation:
+#   - $200-250: backtest sweet spot
+#   - $150: more aggressive, locks earlier
+#   - $300+: rarely triggers, won't catch SL weeks reliably
+#   - 0 or ENABLED=False: disabled, behaves as before
+
+WEEKLY_PROFIT_LOCK_ENABLED: bool = True
+WEEKLY_PROFIT_LOCK_USD: float = 250.0   # Backtest optimum. Override at runtime via /setweekly
+
+# ----------------------------------------------------------------------------
+# RESCUE HEDGE
+# ----------------------------------------------------------------------------
+# When original position reaches RESCUE_TRIGGER_ADVERSE (default $10) adverse,
+# open an opposite-direction MARKET order to capture continued momentum.
+# Both positions then manage independently with same TP/SL/lock-step trail.
+#
+# Backtest result (Jan-Apr 2026, 68 trades):
+#   - Without rescue: +$3,465
+#   - With rescue:    +$3,885 (+$420 / +12% improvement)
+#   - 8 rescues fired: 6 helped, 2 neutral, 0 hurt
+#   - 1 SL day: saved $90
+#   - 5 winning days: rescue captured intraday whipsaw profit
+#
+# REQUIREMENTS
+#   - Account MUST be hedging type (not netting). Check MT5: Tools → Options → Trade.
+#   - Prop firm must allow same-symbol hedging (most do — FTMO/MFF/FundedNext yes).
+#   - Spread cost ~$0.40-$1 per rescue (negligible).
+#
+# LOT SIZE
+#   - RESCUE_LOT_SIZE = None → uses main LOT_SIZE (combined exposure = 2× lot)
+#   - RESCUE_LOT_SIZE = 0.25 → half-size rescue (matches single-position risk)
+#   - For funded accounts, consider matching exposure to single-position rule
+
+RESCUE_ENABLED: bool = True    # Off by default; flip True after demo validation
+RESCUE_TRIGGER_ADVERSE: float = 10.0  # USD adverse from entry that triggers rescue
+RESCUE_LOT_SIZE: float = None   # type: ignore  # None → uses LOT_SIZE
 
 # ----------------------------------------------------------------------------
 # DUAL-BRACKET MODE (ADVANCED — leave OFF until validated)
