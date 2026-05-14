@@ -37,7 +37,7 @@ COMMENT: str = "Anchor02"       # Order comment prefix
 # ----------------------------------------------------------------------------
 
 ANCHOR_HOUR: int = 2            # Broker server hour for anchor (02:00)
-TRIGGER_DIST: float = 10.0      # Entry: anchor ± 10
+TRIGGER_DIST: float = 5.0      # Entry: anchor ± 5
 TP_DIST: float = 3.0            # Take profit: trigger ± 3
 SL_DIST: float = 15.0           # Stop loss: trigger ± 15
 LOCK_STEP: float = 0.30         # Trail step size

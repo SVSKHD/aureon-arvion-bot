@@ -67,6 +67,17 @@ TRAIL_STOP_USD = 0.30
 MASTER_CLOSE_USD = 5.0
 LOT_SIZE = 0.5
 
+# === Ladder strategy (the active one) ===
+# Pyramiding ladder: from a bidirectional anchor (the 2am open initially), each
+# $10 favourable move from the latest entry fires a new position. The 'lock' is
+# the conceptual safety floor for the whole ladder — execution happens when
+# price reverses MASTER_CLOSE_BUFFER_USD past the latest entry, which closes
+# every position in the ladder at that price. The master-close price then
+# becomes the new bidirectional anchor, and the opposite ladder can begin.
+STRATEGY_MODE = "ladder"        # "ladder" (active) or "pivot" (old engine, kept for reference)
+LADDER_STEP_USD = 10.0          # distance between rungs and between anchor and first entry
+MASTER_CLOSE_BUFFER_USD = 5.0   # how far past the latest entry triggers all-close
+
 # When the tracker boots mid-day, replay historical M1 bars through the trade
 # engine to synthesise the paper trades that would have fired between 02:00
 # and now. Each backfilled trade is tagged `backfill=True` in the events log
@@ -300,12 +311,17 @@ def detect_pivots(rates, initial_pivot: dict, reversal_threshold: float):
 # === Paper-trading engine ===
 
 TRADE_FIELDS = [
-    "trade_id", "direction", "lot", "backfill",
+    "trade_id", "cycle_id", "session_date",
+    "direction", "lot", "backfill",
     "entry_price", "entry_server_time", "entry_ist_time",
     "anchor_type", "anchor_price", "anchor_server_time",
+    "trigger_reason",
     "exit_price", "exit_server_time", "exit_ist_time", "exit_reason",
+    "duration_seconds",
     "trail_stop_at_exit", "high_water", "low_water",
-    "price_distance", "pnl_usd",
+    "mfe_price", "mae_price", "mfe_pips", "mae_pips",
+    "price_distance", "pips_moved",
+    "pnl_usd",
 ]
 
 
@@ -326,6 +342,8 @@ def make_paper_trade(trade_id: int, direction: str, entry_price: float,
         trail = entry_price + TRAIL_STOP_USD
     return {
         "trade_id": trade_id,
+        "cycle_id": None,            # filled in by ladder engine for cycle clustering
+        "session_date": None,        # filled in from the active 2am anchor date
         "direction": direction,
         "lot": lot,
         "backfill": False,
@@ -336,6 +354,7 @@ def make_paper_trade(trade_id: int, direction: str, entry_price: float,
         "anchor_type": anchor["type"],
         "anchor_price": anchor["price"],
         "anchor_server_time": anchor["server_time"],
+        "trigger_reason": None,      # FIRST_RUNG | LADDER_CONTINUATION | PIVOT_BREAK
         "trail_stop": round(trail, 4),
         "high_water": entry_price,
         "low_water": entry_price,
@@ -345,12 +364,42 @@ def make_paper_trade(trade_id: int, direction: str, entry_price: float,
 
 def trade_pnl_usd(trade: dict, exit_or_current_price: float,
                   contract_size: float) -> float:
-    """Dollar P&L for a paper trade at the given price."""
+    """Dollar P&L for a paper trade. Tries MT5's broker-aware order_calc_profit
+    first (which knows the real contract specs, currency conversion, and tick
+    value for this broker/account). Falls back to manual contract-size math if
+    MT5 is unavailable (e.g. during unit tests or if the symbol isn't in MarketWatch)."""
+    pnl = order_calc_pnl(trade["direction"], SYMBOL, trade["lot"],
+                         trade["entry_price"], exit_or_current_price)
+    if pnl is not None:
+        return pnl
+    # Manual fallback — assumes USD-denominated symbol with given contract size
     if trade["direction"] == "LONG":
         per_unit = exit_or_current_price - trade["entry_price"]
     else:
         per_unit = trade["entry_price"] - exit_or_current_price
     return per_unit * trade["lot"] * contract_size
+
+
+def order_calc_pnl(direction: str, symbol: str, lot: float,
+                   entry: float, exit_price: float) -> float | None:
+    """Use MT5's broker-aware profit calculation. Returns the profit in account
+    currency, or None if the call fails (caller falls back to manual math).
+
+    Why this matters: contract_size × price_diff × lot only works for USD-quoted
+    symbols on USD accounts. order_calc_profit handles XAUUSD on EUR accounts,
+    XAGUSD with non-standard contract specs, etc., and returns the same number
+    the broker would actually book."""
+    if not hasattr(mt5, "order_calc_profit"):
+        return None
+    action = mt5.ORDER_TYPE_BUY if direction == "LONG" else mt5.ORDER_TYPE_SELL
+    try:
+        result = mt5.order_calc_profit(action, symbol, lot, entry, exit_price)
+        if result is None:
+            # MT5 returns None on failure; check last_error for diagnostics
+            return None
+        return float(result)
+    except Exception:
+        return None
 
 
 def check_paper_entry(latest_pivot: dict, current_bid: float,
@@ -403,7 +452,9 @@ def trail_hit(trade: dict, current_bid: float) -> bool:
 def close_paper_trade(trade: dict, exit_price: float, reason: str,
                       server_now: datetime, ist_now: datetime,
                       contract_size: float) -> None:
-    """Finalize a trade in place."""
+    """Finalize a trade in place. Computes price_distance, pips, MFE/MAE
+    excursions, duration, and dollar P&L (via broker-aware order_calc_profit
+    when MT5 is connected, fallback to manual math otherwise)."""
     trade["status"] = "CLOSED"
     trade["exit_price"] = round(exit_price, 4)
     trade["exit_server_time"] = server_now
@@ -414,6 +465,39 @@ def close_paper_trade(trade: dict, exit_price: float, reason: str,
     else:
         trade["price_distance"] = round(trade["entry_price"] - exit_price, 4)
     trade["pnl_usd"] = round(trade_pnl_usd(trade, exit_price, contract_size), 2)
+
+    # Pips: signed distance / pip_size. For XAUUSD pip_size=0.01 → $1 move = 100 pips.
+    pip_size = get_pip_size(SYMBOL)
+    if pip_size > 0:
+        trade["pips_moved"] = round(trade["price_distance"] / pip_size, 1)
+    else:
+        trade["pips_moved"] = 0.0
+    trade["trail_stop_at_exit"] = trade.get("trail_stop", "")
+
+    # MFE / MAE — derived from the live-updated watermarks.
+    # MFE = how far in our favour price went at its best  (potential we could've captured)
+    # MAE = how far against us price went at its worst    (paper drawdown we absorbed)
+    if trade["direction"] == "LONG":
+        favourable = trade["high_water"] - trade["entry_price"]
+        adverse = trade["entry_price"] - trade["low_water"]
+    else:  # SHORT
+        favourable = trade["entry_price"] - trade["low_water"]
+        adverse = trade["high_water"] - trade["entry_price"]
+    trade["mfe_price"] = round(max(0.0, favourable), 4)
+    trade["mae_price"] = round(max(0.0, adverse), 4)
+    if pip_size > 0:
+        trade["mfe_pips"] = round(trade["mfe_price"] / pip_size, 1)
+        trade["mae_pips"] = round(trade["mae_price"] / pip_size, 1)
+    else:
+        trade["mfe_pips"] = 0.0
+        trade["mae_pips"] = 0.0
+
+    # Duration in seconds — straightforward but convenient for downstream analysis
+    try:
+        delta = (trade["exit_server_time"] - trade["entry_server_time"]).total_seconds()
+        trade["duration_seconds"] = round(delta, 1)
+    except Exception:
+        trade["duration_seconds"] = 0.0
 
 
 def check_master_close(latest_pivot: dict, current_bid: float) -> bool:
@@ -427,9 +511,182 @@ def check_master_close(latest_pivot: dict, current_bid: float) -> bool:
     return False
 
 
+# === Ladder strategy helpers ===
+
+def make_ladder_trade(trade_id: int, direction: str, entry_price: float,
+                      ladder_anchor: float, server_time: datetime,
+                      ist_time: datetime, lot: float, ladder_position: int) -> dict:
+    """Construct a ladder trade. The 'lock_price' starts at the entry (BE) and
+    cascades to each subsequent entry's price as more rungs fire. Master close
+    is what actually closes the trade — at latest_entry ∓ MASTER_CLOSE_BUFFER_USD."""
+    anchor_stub = {
+        "type": "LADDER_LONG" if direction == "LONG" else "LADDER_SHORT",
+        "price": ladder_anchor,
+        "server_time": server_time,
+    }
+    trade = make_paper_trade(trade_id, direction, entry_price, server_time,
+                             ist_time, anchor_stub, lot)
+    trade["lock_price"] = round(entry_price, 4)
+    trade["ladder_position"] = ladder_position
+    return trade
+
+
+def cascade_locks(open_trades: list, new_latest_entry: float) -> None:
+    """When a new rung fires, lift (LONG) or lower (SHORT) every open trade's
+    lock_price to the new latest-entry level. Lock is conceptual — actual exit
+    happens at master close. Returns nothing; mutates in place."""
+    for t in open_trades:
+        if t["direction"] == "LONG":
+            if new_latest_entry > t["lock_price"]:
+                t["lock_price"] = round(new_latest_entry, 4)
+        else:
+            if new_latest_entry < t["lock_price"]:
+                t["lock_price"] = round(new_latest_entry, 4)
+
+
+def check_ladder_master_close(direction: str, latest_entry: float,
+                              current_bid: float) -> bool:
+    """LONG: trigger when bid ≤ latest_entry − buffer.  SHORT: ≥ latest + buffer."""
+    if direction == "LONG":
+        return current_bid <= latest_entry - MASTER_CLOSE_BUFFER_USD
+    if direction == "SHORT":
+        return current_bid >= latest_entry + MASTER_CLOSE_BUFFER_USD
+    return False
+
+
+def ladder_master_close_price(direction: str, latest_entry: float) -> float:
+    """The exact price at which master close fires (used as fill price for all
+    positions, AND as the new anchor for the opposite ladder)."""
+    if direction == "LONG":
+        return round(latest_entry - MASTER_CLOSE_BUFFER_USD, 4)
+    return round(latest_entry + MASTER_CLOSE_BUFFER_USD, 4)
+
+
+def ladder_next_entry(direction: str, latest_entry: float) -> float:
+    """The price at which the next rung fires (latest + 10 for LONG, − 10 for SHORT)."""
+    if direction == "LONG":
+        return round(latest_entry + LADDER_STEP_USD, 4)
+    return round(latest_entry - LADDER_STEP_USD, 4)
+
+
+def bidirectional_trigger(anchor: float, current_bid: float):
+    """When there's no active ladder, decide if price has crossed ±LADDER_STEP_USD
+    from the anchor. Returns ('LONG', trigger_price) or ('SHORT', trigger_price)
+    or (None, None)."""
+    if current_bid >= anchor + LADDER_STEP_USD:
+        return "LONG", round(anchor + LADDER_STEP_USD, 4)
+    if current_bid <= anchor - LADDER_STEP_USD:
+        return "SHORT", round(anchor - LADDER_STEP_USD, 4)
+    return None, None
+
+
 def unrealized_pnl(open_trades: list, current_bid: float,
                    contract_size: float) -> float:
     return sum(trade_pnl_usd(t, current_bid, contract_size) for t in open_trades)
+
+
+def daily_summary(closed_trades: list, risk_stats: dict | None = None) -> dict:
+    """Aggregate the day's closed trades into a single summary dict.
+    Used both for end-of-day printout and for the day_finalized JSONL event.
+
+    risk_stats (optional) merges in DD/exposure/rung peaks captured by the
+    live engine — those aren't derivable from closed trades alone."""
+    if not closed_trades:
+        s = {
+            "trade_count": 0,
+            "wins": 0,
+            "losses": 0,
+            "breakeven": 0,
+            "win_rate_pct": 0.0,
+            "total_pips_moved": 0.0,
+            "total_pnl_usd": 0.0,
+            "best_trade_pnl": 0.0,
+            "worst_trade_pnl": 0.0,
+            "longs": 0,
+            "shorts": 0,
+            "by_exit_reason": {},
+        }
+    else:
+        pnls = [float(t.get("pnl_usd", 0)) for t in closed_trades]
+        pips = [float(t.get("pips_moved", 0)) for t in closed_trades]
+        wins = sum(1 for p in pnls if p > 0)
+        losses = sum(1 for p in pnls if p < 0)
+        breakeven = sum(1 for p in pnls if p == 0)
+        longs = sum(1 for t in closed_trades if t.get("direction") == "LONG")
+        shorts = sum(1 for t in closed_trades if t.get("direction") == "SHORT")
+        by_reason = {}
+        for t in closed_trades:
+            r = t.get("exit_reason", "?")
+            by_reason[r] = by_reason.get(r, 0) + 1
+        s = {
+            "trade_count": len(closed_trades),
+            "wins": wins,
+            "losses": losses,
+            "breakeven": breakeven,
+            "win_rate_pct": round(100.0 * wins / len(closed_trades), 1),
+            "total_pips_moved": round(sum(pips), 1),
+            "total_pnl_usd": round(sum(pnls), 2),
+            "best_trade_pnl": round(max(pnls), 2),
+            "worst_trade_pnl": round(min(pnls), 2),
+            "longs": longs,
+            "shorts": shorts,
+            "by_exit_reason": by_reason,
+        }
+    if risk_stats:
+        s.update({
+            "max_floating_dd": round(float(risk_stats.get("max_floating_dd", 0.0)), 2),
+            "max_rungs": int(risk_stats.get("max_rungs", 0)),
+            "max_exposure_lots": float(risk_stats.get("max_exposure_lots", 0.0)),
+        })
+    return s
+
+
+def print_daily_summary(date_str: str, closed_trades: list,
+                        ladder_cycles: int = 0,
+                        carryover_trades: list | None = None,
+                        current_price: float | None = None,
+                        contract_size: float = 100.0,
+                        risk_stats: dict | None = None):
+    """Pretty-print the day's results to console. Called at day rollover AND on
+    shutdown so you can read it at a glance without grepping the JSONL.
+
+    carryover_trades / current_price let the summary show what's still OPEN at
+    the boundary — important for a 24/7 bot where positions can span days.
+    risk_stats surfaces max DD / peak exposure / peak rungs from the live engine."""
+    s = daily_summary(closed_trades, risk_stats=risk_stats)
+    print()
+    print("=" * 64)
+    print(f"  DAILY SUMMARY  —  {date_str}  ({SYMBOL})")
+    print("=" * 64)
+    print(f"  Trades closed   : {s['trade_count']}  "
+          f"({s['longs']} LONG / {s['shorts']} SHORT)")
+    print(f"  Wins / Losses   : {s['wins']} / {s['losses']}  "
+          f"(win rate {s['win_rate_pct']}%)")
+    print(f"  Total pips      : {s['total_pips_moved']:+.1f}")
+    print(f"  Realized P&L    : ${s['total_pnl_usd']:+.2f}")
+    if s['trade_count'] > 0:
+        print(f"  Best / Worst    : ${s['best_trade_pnl']:+.2f}  /  "
+              f"${s['worst_trade_pnl']:+.2f}")
+    if s["by_exit_reason"]:
+        reasons = ", ".join(f"{k}={v}" for k, v in s["by_exit_reason"].items())
+        print(f"  Exit reasons    : {reasons}")
+    if ladder_cycles > 0:
+        print(f"  Ladder cycles   : {ladder_cycles}")
+
+    # Risk telemetry (only present if risk_stats supplied)
+    if risk_stats:
+        print(f"  Max floating DD : ${s.get('max_floating_dd', 0.0):+.2f}")
+        print(f"  Peak rungs      : {s.get('max_rungs', 0)}")
+        print(f"  Peak exposure   : {s.get('max_exposure_lots', 0.0):g} lot")
+
+    # Carried-over positions — open across the boundary
+    if carryover_trades and current_price is not None:
+        unreal = sum(trade_pnl_usd(t, current_price, contract_size)
+                     for t in carryover_trades)
+        ids = ", ".join(f"#{t['trade_id']}" for t in carryover_trades)
+        print(f"  Carry-over open : {len(carryover_trades)} trade(s)  "
+              f"{ids}  unrealized ${unreal:+.2f}")
+    print("=" * 64)
 
 
 def backfill_paper_trades(pivots: list, bars, contract_size: float):
@@ -507,6 +764,92 @@ def backfill_paper_trades(pivots: list, bars, contract_size: float):
     return closed, open_trades, anchors_used, trade_id, total_pnl
 
 
+def backfill_ladder(bars, initial_anchor: float, contract_size: float):
+    """Replay historical M1 bars through the LADDER engine to synthesise the
+    ladder cycles that would have fired between 02:00 and 'now'. Uses bar-close
+    as the tick price, matching the live polling model and avoiding the
+    intra-bar noise that would falsely trigger master closes.
+
+    Returns a state dict with closed trades, open trades, anchor/direction/
+    latest-entry to roll into the live engine, and cycle/PnL totals.
+
+    All synthesised trades are tagged `backfill=True`."""
+    open_trades = []
+    closed_trades = []
+    trade_id = 1
+    direction = None
+    latest_entry = None
+    anchor = initial_anchor
+    realized_pnl = 0.0
+    cycles = 0
+
+    for bar in bars:
+        server_time = broker_dt(int(bar["time"]))
+        # Convert broker UTC to IST for the trade row's display-side timestamp
+        bar_ist = (server_time.replace(tzinfo=timezone.utc).astimezone(IST))
+        price = float(bar["close"])
+
+        # === Master close (resolves before entries — same as live) ===
+        if (direction is not None
+                and latest_entry is not None
+                and check_ladder_master_close(direction, latest_entry, price)):
+            close_price = ladder_master_close_price(direction, latest_entry)
+            for t in list(open_trades):
+                close_paper_trade(t, close_price, "MASTER_CLOSE",
+                                  server_time, bar_ist, contract_size)
+                closed_trades.append(t)
+                realized_pnl += t["pnl_usd"]
+            open_trades = []
+            anchor = close_price
+            direction = None
+            latest_entry = None
+            cycles += 1
+
+        # === Entries (loop in case price gap fired multiple rungs in one bar) ===
+        fired = True
+        while fired:
+            fired = False
+            if direction is None:
+                d, trigger = bidirectional_trigger(anchor, price)
+                if d is not None:
+                    nt = make_ladder_trade(trade_id, d, trigger, anchor,
+                                           server_time, bar_ist, LOT_SIZE, 1)
+                    nt["backfill"] = True
+                    open_trades.append(nt)
+                    direction = d
+                    latest_entry = trigger
+                    trade_id += 1
+                    fired = True
+            else:
+                nxt = ladder_next_entry(direction, latest_entry)
+                should_fire = (
+                    (direction == "LONG" and price >= nxt)
+                    or
+                    (direction == "SHORT" and price <= nxt)
+                )
+                if should_fire:
+                    rung = len(open_trades) + 1
+                    nt = make_ladder_trade(trade_id, direction, nxt, anchor,
+                                           server_time, bar_ist, LOT_SIZE, rung)
+                    nt["backfill"] = True
+                    open_trades.append(nt)
+                    cascade_locks(open_trades, nxt)
+                    latest_entry = nxt
+                    trade_id += 1
+                    fired = True
+
+    return {
+        "open_trades": open_trades,
+        "closed_trades": closed_trades,
+        "realized_pnl": round(realized_pnl, 2),
+        "trade_id": trade_id,
+        "cycles": cycles,
+        "ladder_anchor": anchor,
+        "ladder_direction": direction,
+        "ladder_latest_entry": latest_entry,
+    }
+
+
 def append_trade_log(path: str, trade: dict):
     """Append one closed trade as a row. Header is written if file is new."""
     is_new = not os.path.exists(path)
@@ -521,6 +864,17 @@ def append_trade_log(path: str, trade: dict):
             if isinstance(row.get(k), datetime):
                 row[k] = row[k].isoformat(sep=" ")
         writer.writerow(row)
+
+
+def ensure_trade_log_header(path: str):
+    """Create the trade log with just the header row if it doesn't exist yet.
+    This makes the file visible at startup — important so the operator can
+    confirm output paths are correct without having to wait for the first
+    trade to close. Subsequent append_trade_log() calls add rows as trades fire."""
+    if not os.path.exists(path):
+        with open(path, "w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=TRADE_FIELDS)
+            writer.writeheader()
 
 
 # === Event log (JSONL) ===
@@ -640,10 +994,16 @@ def build_record(data: dict, last_price: float) -> dict:
 def print_heartbeat(pivot: dict, candidate: dict | None, threshold: float,
                     pip_size: float, last_price: float,
                     day_high: float, day_low: float,
-                    open_trades: list, closed_pnl: float, contract_size: float):
-    """One-line live state. Shows the last confirmed pivot, the running
-    candidate for the next pivot, the price at which the candidate would
-    confirm, plus open-trade count and unrealized + realized P&L."""
+                    open_trades: list, closed_pnl: float, contract_size: float,
+                    ladder_anchor: float | None = None,
+                    ladder_direction: str | None = None,
+                    ladder_latest_entry: float | None = None,
+                    ladder_open: list | None = None,
+                    ladder_closed_pnl: float = 0.0,
+                    ladder_cycles: int = 0,
+                    max_floating_dd: float = 0.0):
+    """One-line live state. Shows last pivot + running candidate + flip price
+    (observation), plus ladder state (active strategy) or legacy trade block."""
     ist = get_ist_now()
     pivot_letter = pivot["type"][0]
 
@@ -657,34 +1017,54 @@ def print_heartbeat(pivot: dict, candidate: dict | None, threshold: float,
             flip_at = candidate["price"] + threshold
             flip_label = f"flip≥{flip_at:.2f}"
         pivot_block = (
-            f"{pivot_letter} {pivot['price']:.2f}@{pivot['server_time']:%H:%M} "
-            f"→ {cand_letter} {candidate['price']:.2f}@{candidate['server_time']:%H:%M} "
-            f"swg{swing:+.2f} {flip_label}"
+            f"pvt {pivot_letter}{pivot['price']:.2f} → {cand_letter}{candidate['price']:.2f} "
+            f"swg{swing:+.2f}"
         )
     else:
-        pivot_block = (
-            f"{pivot_letter} {pivot['price']:.2f}@{pivot['server_time']:%H:%M} "
-            f"(no cand)"
-        )
+        pivot_block = f"pvt {pivot_letter}{pivot['price']:.2f}"
 
-    unreal = unrealized_pnl(open_trades, last_price, contract_size)
-    trade_block = (
-        f"open {len(open_trades)} ${unreal:+.2f}  closed ${closed_pnl:+.2f}"
-    )
+    if STRATEGY_MODE == "ladder":
+        if ladder_anchor is None:
+            ladder_block = "LDR no anchor"
+        elif ladder_direction is None:
+            up_trig = ladder_anchor + LADDER_STEP_USD
+            dn_trig = ladder_anchor - LADDER_STEP_USD
+            ladder_block = (
+                f"LDR idle anch ${ladder_anchor:.2f} "
+                f"L≥${up_trig:.2f} S≤${dn_trig:.2f}"
+            )
+        else:
+            n = len(ladder_open or [])
+            next_rung = ladder_next_entry(ladder_direction, ladder_latest_entry)
+            close_at = ladder_master_close_price(ladder_direction, ladder_latest_entry)
+            unreal = sum(trade_pnl_usd(t, last_price, contract_size) for t in (ladder_open or []))
+            total_lot = n * LOT_SIZE
+            ladder_block = (
+                f"LDR {ladder_direction}#{n} ({total_lot:g}lot) anc ${ladder_anchor:.2f} "
+                f"lst ${ladder_latest_entry:.2f} next ${next_rung:.2f} "
+                f"cls ${close_at:.2f} ur${unreal:+.2f} dd${max_floating_dd:+.2f}"
+            )
+        if ladder_cycles > 0:
+            ladder_block += f" cyc{ladder_cycles}"
+        trade_block = f"{ladder_block} | tot ${ladder_closed_pnl:+.2f}"
+    else:
+        unreal = unrealized_pnl(open_trades, last_price, contract_size)
+        trade_block = (
+            f"open {len(open_trades)} ${unreal:+.2f}  closed ${closed_pnl:+.2f}"
+        )
 
     from_day_high = last_price - day_high
     from_day_low = last_price - day_low
     day_block = (
-        f"day H {day_high:.2f}(Δ{from_day_high:+.2f}) "
-        f"L {day_low:.2f}(Δ{from_day_low:+.2f})"
+        f"day H{day_high:.2f}Δ{from_day_high:+.2f} L{day_low:.2f}Δ{from_day_low:+.2f}"
     )
 
     line = (
         f"\r[{ist:%H:%M:%S}] "
         f"${last_price:.2f}  "
-        f"{pivot_block}  | "
-        f"{day_block}  | "
-        f"{trade_block}"
+        f"{pivot_block} | "
+        f"{trade_block} | "
+        f"{day_block}"
     )
     sys.stdout.write(line.ljust(HEARTBEAT_WIDTH))
     sys.stdout.flush()
@@ -722,6 +1102,7 @@ def run():
     connect_mt5()
 
     migrate_legacy_paths()
+    ensure_trade_log_header(TRADE_LOG_PATH)
 
     pip_size = get_pip_size(SYMBOL)
     info = mt5.symbol_info(SYMBOL)
@@ -738,20 +1119,42 @@ def run():
     last_low = None
     did_backfill = False  # set True after the one-shot historical backfill
 
-    # Paper-trade state
+    # Paper-trade state (pivot mode — legacy)
     open_trades = []
     closed_trades_today = []   # closed during this day, for the day_finalized summary
     anchors_used = set()       # anchor_keys already fired
     next_trade_id = 1
     closed_pnl_total = 0.0     # realized P&L for the session
 
+    # Ladder state (active mode)
+    ladder_anchor = None           # current bidirectional reference price
+    ladder_direction = None        # None, "LONG", or "SHORT"
+    ladder_latest_entry = None     # price of most recently filed rung
+    ladder_open = []               # open ladder trades
+    ladder_trade_id = 1
+    ladder_closed_today = []       # ladder trades closed today
+    ladder_closed_pnl = 0.0        # realized P&L from ladder
+    ladder_cycles = 0              # how many master-close → flip events
+    ladder_backfilled = False      # one-shot historical replay completed
+    current_cycle_id = None        # set at first entry of each cycle; same for all rungs in that cycle
+
+    # Risk telemetry (resets daily at 2am along with other daily counters)
+    max_floating_dd = 0.0          # most-negative unrealized P&L seen today
+    max_exposure_lots = 0.0        # peak total lots held at any tick
+    max_rungs_today = 0            # deepest the ladder reached today
+
     print(f"Started tracker for {SYMBOL}")
     print(f"Daily anchor: {ANCHOR_HOUR:02d}:{ANCHOR_MINUTE:02d} broker time")
     print(f"Timeframe   : M1 (1-minute timestamp resolution)")
-    print(f"Pivot mode  : ZigZag — flips only on ${REVERSAL_THRESHOLD_USD:.2f} reversal")
-    print(f"Paper trade : trigger ${TRADE_TRIGGER_USD:.2f} / trail ${TRAIL_STOP_USD:.2f} "
-          f"/ master close ${MASTER_CLOSE_USD:.2f} / lot {LOT_SIZE} "
-          f"(contract {contract_size:g} → ${LOT_SIZE * contract_size:.0f}/$1 move)")
+    print(f"Pivot mode  : ZigZag — flips only on ${REVERSAL_THRESHOLD_USD:.2f} reversal (observation only in ladder mode)")
+    print(f"Strategy    : {STRATEGY_MODE.upper()}")
+    if STRATEGY_MODE == "ladder":
+        print(f"Ladder      : step ${LADDER_STEP_USD:.2f}  master-close buffer ${MASTER_CLOSE_BUFFER_USD:.2f}  "
+              f"lot {LOT_SIZE} (contract {contract_size:g} → ${LOT_SIZE * contract_size:.0f}/$1)")
+    else:
+        print(f"Paper trade : trigger ${TRADE_TRIGGER_USD:.2f} / trail ${TRAIL_STOP_USD:.2f} "
+              f"/ master close ${MASTER_CLOSE_USD:.2f} / lot {LOT_SIZE} "
+              f"(contract {contract_size:g} → ${LOT_SIZE * contract_size:.0f}/$1 move)")
     print(f"Files       : {LOG_PATH}, {TRADE_LOG_PATH}, {EVENT_LOG_PATH}")
     print(f"Daily log   : {len(daily_records)} record(s) loaded")
     print(f"Continuity  : {continuity}")
@@ -781,9 +1184,38 @@ def run():
 
                 if active_anchor is not None:
                     prev_date = active_anchor.date().isoformat()
+
+                    # Print daily summary (separate for each strategy mode)
+                    all_closed = (closed_trades_today
+                                  if STRATEGY_MODE == "pivot"
+                                  else ladder_closed_today)
+                    carryover = (open_trades
+                                 if STRATEGY_MODE == "pivot"
+                                 else ladder_open)
+                    # Best estimate of price at the rollover instant
+                    rollover_price = anchor_data["price"] if anchor_data else 0
+                    try:
+                        tick = mt5.symbol_info_tick(SYMBOL)
+                        if tick is not None:
+                            rollover_price = tick.bid
+                    except Exception:
+                        pass
+                    risk_stats_dict = {
+                        "max_floating_dd": max_floating_dd,
+                        "max_rungs": max_rungs_today,
+                        "max_exposure_lots": max_exposure_lots,
+                    }
+                    print_daily_summary(prev_date, all_closed, ladder_cycles,
+                                        carryover_trades=carryover,
+                                        current_price=rollover_price,
+                                        contract_size=contract_size,
+                                        risk_stats=risk_stats_dict)
+
+                    summary_dict = daily_summary(all_closed, risk_stats=risk_stats_dict)
+
                     if prev_date in daily_records:
                         r = daily_records[prev_date]
-                        print(f"\n>>> Finalized {prev_date}: "
+                        print(f">>> Finalized {prev_date}: "
                               f"anchor={r['anchor_price']} "
                               f"high=+${r['high_dollars']} "
                               f"low=${r['low_dollars']}")
@@ -799,10 +1231,17 @@ def run():
                             "low_server_time": r["low_server_time"],
                             "candles_read": int(r.get("candles_read") or 0),
                             "pivots_count": pivots_count,
-                            "trades_closed": len(closed_trades_today),
-                            "trades_left_open": len(open_trades),
-                            "realized_pnl": round(closed_pnl_total, 2),
+                            "trades_closed": len(all_closed),
+                            "trades_left_open": (len(open_trades)
+                                                 if STRATEGY_MODE == "pivot"
+                                                 else len(ladder_open)),
+                            "realized_pnl": (round(closed_pnl_total, 2)
+                                             if STRATEGY_MODE == "pivot"
+                                             else round(ladder_closed_pnl, 2)),
                             "last_price_recorded": float(r.get("last_price") or 0),
+                            "strategy_mode": STRATEGY_MODE,
+                            "ladder_cycles": ladder_cycles,
+                            "summary": summary_dict,
                         }, get_server_now(SYMBOL), get_ist_now())
 
                 active_anchor = anchor_time
@@ -812,12 +1251,61 @@ def run():
                 last_low = None
                 did_backfill = False
 
-                # Fresh day: clear paper-trade state
-                open_trades = []
+                # === 24/7 BOUNDARY HANDLING ===
+                # The bot runs continuously across the 2am rollover. Open trades
+                # and live ladder state CARRY OVER — only the per-day reporting
+                # counters reset. Force-closing at 2am would orphan real risk;
+                # the ladder closes itself naturally via master close.
+
+                # Pivot mode: reset daily counters; open_trades / anchors_used persist
                 closed_trades_today = []
-                anchors_used = set()
-                next_trade_id = 1
                 closed_pnl_total = 0.0
+                # open_trades — CARRY OVER (do not clear)
+                # anchors_used — CARRY OVER (old pivots stay marked-as-used)
+                # next_trade_id — CARRY OVER (don't recycle IDs)
+
+                # Ladder mode: reset daily counters; ladder state persists
+                ladder_closed_today = []
+                ladder_closed_pnl = 0.0
+                ladder_cycles = 0
+                # ladder_open, ladder_direction, ladder_latest_entry,
+                # ladder_trade_id — ALL CARRY OVER
+
+                # Risk telemetry resets daily (max-DD-per-day is the audit metric)
+                max_floating_dd = 0.0
+                max_exposure_lots = 0.0
+                max_rungs_today = 0
+
+                # Re-arm ladder backfill for the new day (rare: only relevant
+                # if the tracker was restarted across midnight, which the
+                # ladder_backfilled flag would normally prevent)
+                ladder_backfilled = True  # do not re-backfill within a session
+
+                # Only reset the bidirectional anchor if NO ladder is active.
+                # If a ladder is mid-flight, its anchor stays put until the
+                # ladder closes naturally; this morning's 2am open is just a
+                # daily marker in that case.
+                if ladder_direction is None and not ladder_open:
+                    ladder_anchor = anchor_data["price"]
+                    anchor_note = f"ladder anchor reset to 2am open ${ladder_anchor:.2f}"
+                else:
+                    anchor_note = (
+                        f"ladder CARRIES OVER  {ladder_direction} #{len(ladder_open)} "
+                        f"anchor ${ladder_anchor:.2f}  latest ${ladder_latest_entry:.2f}"
+                    )
+                print(f"    [{anchor_note}]")
+                log_event("day_boundary", {
+                    "new_date": active_anchor.date().isoformat(),
+                    "ladder_carryover": ladder_direction is not None or bool(ladder_open),
+                    "ladder_direction": ladder_direction,
+                    "ladder_anchor": ladder_anchor,
+                    "ladder_latest_entry": ladder_latest_entry,
+                    "ladder_open_count": len(ladder_open),
+                    "ladder_open_trade_ids": [t["trade_id"] for t in ladder_open],
+                    "pivot_open_count": len(open_trades),
+                    "pivot_open_trade_ids": [t["trade_id"] for t in open_trades],
+                    "anchor_note": anchor_note,
+                }, get_server_now(SYMBOL), get_ist_now())
 
                 print("\n========== New Daily Anchor ==========")
                 print(f"Anchor Server Time : {active_anchor}")
@@ -887,7 +1375,8 @@ def run():
             # finds existing pivots that elapsed before we were watching.
             # Synthesises the trades that WOULD have fired between 02:00 and
             # now so the audit log isn't empty just because we started late.
-            if (BACKFILL_TRADES_ON_START
+            if (STRATEGY_MODE == "pivot"
+                    and BACKFILL_TRADES_ON_START
                     and not did_backfill
                     and len(pivots) > 1
                     and rates is not None):
@@ -975,6 +1464,102 @@ def run():
                 did_backfill = True
                 last_high = None
 
+            # === Ladder backfill (one-shot historical replay for ladder mode) ===
+            if (STRATEGY_MODE == "ladder"
+                    and BACKFILL_TRADES_ON_START
+                    and not ladder_backfilled
+                    and rates is not None
+                    and len(rates) > 0):
+                seed_anchor = ladder_anchor or anchor_data["price"]
+                bf = backfill_ladder(rates, seed_anchor, contract_size)
+
+                # Roll synthesised state into the live engine
+                ladder_open = bf["open_trades"]
+                ladder_closed_today = list(bf["closed_trades"])
+                ladder_closed_pnl = bf["realized_pnl"]
+                ladder_trade_id = bf["trade_id"]
+                ladder_cycles = bf["cycles"]
+                ladder_anchor = bf["ladder_anchor"]
+                ladder_direction = bf["ladder_direction"]
+                ladder_latest_entry = bf["ladder_latest_entry"]
+
+                if last_high is not None:
+                    print()
+                print(
+                    f">>> LADDER BACKFILL  replayed {len(rates)} bars  "
+                    f"→ {len(ladder_closed_today)} closed trades  "
+                    f"{len(ladder_open)} still open  "
+                    f"{ladder_cycles} cycle(s)  realized ${ladder_closed_pnl:+.2f}"
+                )
+
+                # Persist each synthesised closed trade to CSV + events
+                for t in ladder_closed_today:
+                    append_trade_log(TRADE_LOG_PATH, t)
+                    print(
+                        f"    backfill #{t['trade_id']} {t['direction']:<5} rung "
+                        f"{t.get('ladder_position', '?')} entry ${t['entry_price']:.2f} "
+                        f"@ {t['entry_server_time']} → exit ${t['exit_price']:.2f} "
+                        f"@ {t['exit_server_time']}  PnL ${t['pnl_usd']:+.2f}"
+                    )
+                    log_event("trade_entry", {
+                        "trade_id": t["trade_id"],
+                        "direction": t["direction"],
+                        "lot": t["lot"],
+                        "entry_price": t["entry_price"],
+                        "ladder_anchor": t["anchor_price"],
+                        "ladder_position": t.get("ladder_position"),
+                        "entry_server_time": t["entry_server_time"].isoformat(sep=" "),
+                        "backfill": True,
+                        "strategy": "ladder",
+                    }, t["entry_server_time"], get_ist_now())
+                    log_event("trade_exit", {
+                        "trade_id": t["trade_id"],
+                        "direction": t["direction"],
+                        "lot": t["lot"],
+                        "entry_price": t["entry_price"],
+                        "exit_price": t["exit_price"],
+                        "exit_server_time": t["exit_server_time"].isoformat(sep=" "),
+                        "reason": t["exit_reason"],
+                        "price_distance": t["price_distance"],
+                        "pips_moved": t.get("pips_moved", 0),
+                        "pnl_usd": t["pnl_usd"],
+                        "ladder_position": t.get("ladder_position"),
+                        "backfill": True,
+                    }, t["exit_server_time"], get_ist_now())
+
+                # Open carry-over from backfill: log entry only, will close live
+                for t in ladder_open:
+                    print(
+                        f"    backfill #{t['trade_id']} {t['direction']:<5} rung "
+                        f"{t.get('ladder_position', '?')} entry ${t['entry_price']:.2f}  "
+                        f"STILL OPEN  lock ${t['lock_price']:.2f}"
+                    )
+                    log_event("trade_entry", {
+                        "trade_id": t["trade_id"],
+                        "direction": t["direction"],
+                        "lot": t["lot"],
+                        "entry_price": t["entry_price"],
+                        "ladder_anchor": t["anchor_price"],
+                        "ladder_position": t.get("ladder_position"),
+                        "entry_server_time": t["entry_server_time"].isoformat(sep=" "),
+                        "lock_price": t["lock_price"],
+                        "backfill": True,
+                        "strategy": "ladder",
+                    }, t["entry_server_time"], get_ist_now())
+
+                log_event("ladder_backfill_complete", {
+                    "bars_replayed": len(rates),
+                    "trades_closed": len(ladder_closed_today),
+                    "trades_still_open": len(ladder_open),
+                    "cycles": ladder_cycles,
+                    "realized_pnl": ladder_closed_pnl,
+                    "final_anchor": ladder_anchor,
+                    "final_direction": ladder_direction,
+                    "final_latest_entry": ladder_latest_entry,
+                }, server_now, get_ist_now())
+
+                ladder_backfilled = True
+                last_high = None
             # Daily stats (since 02:00 anchor) — for full report + daily log
             data = compute_high_low(
                 SYMBOL, active_anchor, anchor_data, server_now, pip_size,
@@ -986,113 +1571,339 @@ def run():
                 last_price = tick.bid if tick is not None else data["high"]["price"]
                 ist_now = get_ist_now()
 
-                # === Paper-trade engine ===
+                # === Paper-trade engine (pivot mode, legacy) ===
+                if STRATEGY_MODE == "pivot":
+                    latest_pivot = pivots[-1]
 
-                latest_pivot = pivots[-1]
-
-                # 1. Check for a new entry from the latest pivot
-                new_trade, next_trade_id = check_paper_entry(
-                    latest_pivot, last_price, anchors_used, next_trade_id,
-                    server_now, ist_now,
-                )
-                if new_trade is not None:
-                    open_trades.append(new_trade)
-                    if last_high is not None:
-                        print()
-                    print(
-                        f">>> ENTRY  #{new_trade['trade_id']} {new_trade['direction']:<5}  "
-                        f"${new_trade['entry_price']:.2f}  "
-                        f"(from {latest_pivot['type']} ${latest_pivot['price']:.2f}, "
-                        f"+${TRADE_TRIGGER_USD:.2f}), trail ${new_trade['trail_stop']:.2f}, "
-                        f"lot {LOT_SIZE}  [IST {ist_now:%H:%M:%S}]"
+                    # 1. Check for a new entry from the latest pivot
+                    new_trade, next_trade_id = check_paper_entry(
+                        latest_pivot, last_price, anchors_used, next_trade_id,
+                        server_now, ist_now,
                     )
-                    log_event("trade_entry", {
-                        "trade_id": new_trade["trade_id"],
-                        "direction": new_trade["direction"],
-                        "lot": new_trade["lot"],
-                        "entry_price": new_trade["entry_price"],
-                        "anchor_type": latest_pivot["type"],
-                        "anchor_price": latest_pivot["price"],
-                        "anchor_server_time": latest_pivot["server_time"].isoformat(sep=" "),
-                        "initial_trail_stop": new_trade["trail_stop"],
-                        "bid_at_trigger": last_price,
-                    }, server_now, ist_now)
-                    last_high = None
-
-                # 2. Advance trails for every open trade
-                for t in open_trades:
-                    update_trail(t, last_price)
-
-                # 3. Check for trail-stop hits → close those trades
-                still_open = []
-                for t in open_trades:
-                    if trail_hit(t, last_price):
-                        close_paper_trade(t, t["trail_stop"], "TRAIL_HIT",
-                                          server_now, ist_now, contract_size)
-                        closed_pnl_total += t["pnl_usd"]
-                        closed_trades_today.append(t)
-                        append_trade_log(TRADE_LOG_PATH, t)
+                    if new_trade is not None:
+                        open_trades.append(new_trade)
                         if last_high is not None:
                             print()
                         print(
-                            f">>> EXIT   #{t['trade_id']} {t['direction']:<5}  "
-                            f"${t['exit_price']:.2f}  reason TRAIL  "
-                            f"price_move ${t['price_distance']:+.2f}  "
-                            f"PnL ${t['pnl_usd']:+.2f}  "
-                            f"[IST {ist_now:%H:%M:%S}]"
+                            f">>> ENTRY  #{new_trade['trade_id']} {new_trade['direction']:<5}  "
+                            f"${new_trade['entry_price']:.2f}  "
+                            f"(from {latest_pivot['type']} ${latest_pivot['price']:.2f}, "
+                            f"+${TRADE_TRIGGER_USD:.2f}), trail ${new_trade['trail_stop']:.2f}, "
+                            f"lot {LOT_SIZE}  [IST {ist_now:%H:%M:%S}]"
                         )
-                        log_event("trade_exit", {
-                            "trade_id": t["trade_id"],
-                            "direction": t["direction"],
-                            "lot": t["lot"],
-                            "entry_price": t["entry_price"],
-                            "exit_price": t["exit_price"],
-                            "reason": "TRAIL_HIT",
-                            "price_distance": t["price_distance"],
-                            "pnl_usd": t["pnl_usd"],
-                            "high_water": t["high_water"],
-                            "low_water": t["low_water"],
-                            "anchor_type": t["anchor_type"],
-                            "anchor_price": t["anchor_price"],
+                        log_event("trade_entry", {
+                            "trade_id": new_trade["trade_id"],
+                            "direction": new_trade["direction"],
+                            "lot": new_trade["lot"],
+                            "entry_price": new_trade["entry_price"],
+                            "anchor_type": latest_pivot["type"],
+                            "anchor_price": latest_pivot["price"],
+                            "anchor_server_time": latest_pivot["server_time"].isoformat(sep=" "),
+                            "initial_trail_stop": new_trade["trail_stop"],
+                            "bid_at_trigger": last_price,
                         }, server_now, ist_now)
                         last_high = None
-                    else:
-                        still_open.append(t)
-                open_trades = still_open
 
-                # 4. Master close — $5 opposite move from latest pivot
-                if open_trades and check_master_close(latest_pivot, last_price):
-                    if last_high is not None:
-                        print()
-                    print(
-                        f">>> MASTER CLOSE — ${MASTER_CLOSE_USD:.2f} opposite move from "
-                        f"{latest_pivot['type']} ${latest_pivot['price']:.2f}, "
-                        f"bid ${last_price:.2f}. Closing {len(open_trades)} trade(s)."
-                    )
-                    master_close_trade_ids = []
-                    master_close_total_pnl = 0.0
-                    for t in list(open_trades):
-                        close_paper_trade(t, last_price, "MASTER_CLOSE",
-                                          server_now, ist_now, contract_size)
-                        closed_pnl_total += t["pnl_usd"]
-                        closed_trades_today.append(t)
-                        master_close_trade_ids.append(t["trade_id"])
-                        master_close_total_pnl += t["pnl_usd"]
-                        append_trade_log(TRADE_LOG_PATH, t)
+                    # 2. Advance trails for every open trade
+                    for t in open_trades:
+                        update_trail(t, last_price)
+
+                    # 3. Check for trail-stop hits → close those trades
+                    still_open = []
+                    for t in open_trades:
+                        if trail_hit(t, last_price):
+                            close_paper_trade(t, t["trail_stop"], "TRAIL_HIT",
+                                              server_now, ist_now, contract_size)
+                            closed_pnl_total += t["pnl_usd"]
+                            closed_trades_today.append(t)
+                            append_trade_log(TRADE_LOG_PATH, t)
+                            if last_high is not None:
+                                print()
+                            print(
+                                f">>> EXIT   #{t['trade_id']} {t['direction']:<5}  "
+                                f"${t['exit_price']:.2f}  reason TRAIL  "
+                                f"price_move ${t['price_distance']:+.2f}  "
+                                f"PnL ${t['pnl_usd']:+.2f}  "
+                                f"[IST {ist_now:%H:%M:%S}]"
+                            )
+                            log_event("trade_exit", {
+                                "trade_id": t["trade_id"],
+                                "direction": t["direction"],
+                                "lot": t["lot"],
+                                "entry_price": t["entry_price"],
+                                "exit_price": t["exit_price"],
+                                "reason": "TRAIL_HIT",
+                                "price_distance": t["price_distance"],
+                                "pnl_usd": t["pnl_usd"],
+                                "high_water": t["high_water"],
+                                "low_water": t["low_water"],
+                                "anchor_type": t["anchor_type"],
+                                "anchor_price": t["anchor_price"],
+                            }, server_now, ist_now)
+                            last_high = None
+                        else:
+                            still_open.append(t)
+                    open_trades = still_open
+
+                    # 4. Master close — $5 opposite move from latest pivot
+                    if open_trades and check_master_close(latest_pivot, last_price):
+                        if last_high is not None:
+                            print()
                         print(
-                            f"    #{t['trade_id']} {t['direction']:<5} closed @ "
-                            f"${t['exit_price']:.2f}  PnL ${t['pnl_usd']:+.2f}"
+                            f">>> MASTER CLOSE — ${MASTER_CLOSE_USD:.2f} opposite move from "
+                            f"{latest_pivot['type']} ${latest_pivot['price']:.2f}, "
+                            f"bid ${last_price:.2f}. Closing {len(open_trades)} trade(s)."
                         )
-                    log_event("master_close", {
-                        "latest_pivot_type": latest_pivot["type"],
-                        "latest_pivot_price": latest_pivot["price"],
-                        "bid_at_close": last_price,
-                        "threshold_usd": MASTER_CLOSE_USD,
-                        "closed_trade_ids": master_close_trade_ids,
-                        "total_pnl_usd": round(master_close_total_pnl, 2),
-                    }, server_now, ist_now)
-                    open_trades = []
-                    last_high = None
+                        master_close_trade_ids = []
+                        master_close_total_pnl = 0.0
+                        for t in list(open_trades):
+                            close_paper_trade(t, last_price, "MASTER_CLOSE",
+                                              server_now, ist_now, contract_size)
+                            closed_pnl_total += t["pnl_usd"]
+                            closed_trades_today.append(t)
+                            master_close_trade_ids.append(t["trade_id"])
+                            master_close_total_pnl += t["pnl_usd"]
+                            append_trade_log(TRADE_LOG_PATH, t)
+                            print(
+                                f"    #{t['trade_id']} {t['direction']:<5} closed @ "
+                                f"${t['exit_price']:.2f}  PnL ${t['pnl_usd']:+.2f}"
+                            )
+                        log_event("master_close", {
+                            "latest_pivot_type": latest_pivot["type"],
+                            "latest_pivot_price": latest_pivot["price"],
+                            "bid_at_close": last_price,
+                            "threshold_usd": MASTER_CLOSE_USD,
+                            "closed_trade_ids": master_close_trade_ids,
+                            "total_pnl_usd": round(master_close_total_pnl, 2),
+                        }, server_now, ist_now)
+                        open_trades = []
+                        last_high = None
+
+                # === Ladder engine (active mode) ===
+                elif STRATEGY_MODE == "ladder":
+                    if ladder_anchor is None:
+                        ladder_anchor = anchor_data["price"]
+
+                    # 1. Master close check (fires before new entries — single tick can't
+                    #    both flip and re-enter; the flip just sets the new anchor and
+                    #    waits for price to break ±$10 from there)
+                    if (ladder_direction is not None
+                            and ladder_latest_entry is not None
+                            and check_ladder_master_close(
+                                ladder_direction, ladder_latest_entry, last_price)):
+                        close_price = ladder_master_close_price(
+                            ladder_direction, ladder_latest_entry)
+
+                        if last_high is not None:
+                            print()
+                        print(
+                            f">>> MASTER CLOSE  {ladder_direction} ladder "
+                            f"({len(ladder_open)} rung(s))  "
+                            f"latest entry ${ladder_latest_entry:.2f}  "
+                            f"close @ ${close_price:.2f}  [IST {ist_now:%H:%M:%S}]"
+                        )
+
+                        closed_ids = []
+                        cycle_pnl = 0.0
+                        for t in list(ladder_open):
+                            close_paper_trade(t, close_price, "MASTER_CLOSE",
+                                              server_now, ist_now, contract_size)
+                            ladder_closed_pnl += t["pnl_usd"]
+                            ladder_closed_today.append(t)
+                            cycle_pnl += t["pnl_usd"]
+                            closed_ids.append(t["trade_id"])
+                            append_trade_log(TRADE_LOG_PATH, t)
+                            print(
+                                f"    #{t['trade_id']} {t['direction']:<5} rung {t['ladder_position']} "
+                                f"entry ${t['entry_price']:.2f} → exit ${t['exit_price']:.2f}  "
+                                f"PnL ${t['pnl_usd']:+.2f}"
+                            )
+                            log_event("trade_exit", {
+                                "trade_id": t["trade_id"],
+                                "direction": t["direction"],
+                                "ladder_position": t["ladder_position"],
+                                "entry_price": t["entry_price"],
+                                "exit_price": t["exit_price"],
+                                "reason": "MASTER_CLOSE",
+                                "price_distance": t["price_distance"],
+                                "pnl_usd": t["pnl_usd"],
+                                "lock_price": t["lock_price"],
+                                "ladder_anchor": t["anchor_price"],
+                            }, server_now, ist_now)
+
+                        old_anchor = ladder_anchor
+                        old_direction = ladder_direction
+                        prev_latest = ladder_latest_entry
+
+                        # The flip — close price becomes the new bidirectional anchor
+                        ladder_anchor = close_price
+                        ladder_direction = None
+                        ladder_latest_entry = None
+                        ladder_open = []
+                        ladder_cycles += 1
+                        current_cycle_id = None  # next entry will mint a fresh cycle_id
+
+                        log_event("master_close", {
+                            "strategy": "ladder",
+                            "direction_closed": old_direction,
+                            "latest_entry": prev_latest,
+                            "close_price": close_price,
+                            "rungs_closed": len(closed_ids),
+                            "closed_trade_ids": closed_ids,
+                            "cycle_pnl_usd": round(cycle_pnl, 2),
+                            "old_anchor": old_anchor,
+                            "new_anchor": ladder_anchor,
+                            "cycle_number": ladder_cycles,
+                        }, server_now, ist_now)
+                        print(
+                            f">>> ANCHOR FLIP  new anchor ${ladder_anchor:.2f}  "
+                            f"(cycle #{ladder_cycles}, cycle PnL ${cycle_pnl:+.2f}, "
+                            f"day total ${ladder_closed_pnl:+.2f})"
+                        )
+                        last_high = None
+
+                    # 2. Entry checks — may fire multiple rungs if price has run far
+                    fired_this_tick = True
+                    while fired_this_tick:
+                        fired_this_tick = False
+
+                        if ladder_direction is None:
+                            # Bidirectional from anchor
+                            direction, trigger = bidirectional_trigger(
+                                ladder_anchor, last_price)
+                            if direction is not None:
+                                # Mint a new cycle_id for this fresh ladder cycle
+                                session_date = active_anchor.date().isoformat()
+                                current_cycle_id = (
+                                    f"{session_date}_C{ladder_cycles + 1:02d}"
+                                )
+
+                                nt = make_ladder_trade(
+                                    ladder_trade_id, direction, trigger,
+                                    ladder_anchor, server_now, ist_now,
+                                    LOT_SIZE, 1,
+                                )
+                                nt["cycle_id"] = current_cycle_id
+                                nt["session_date"] = session_date
+                                nt["trigger_reason"] = "FIRST_RUNG"
+                                ladder_open.append(nt)
+                                ladder_direction = direction
+                                ladder_latest_entry = trigger
+                                ladder_trade_id += 1
+                                fired_this_tick = True
+
+                                if last_high is not None:
+                                    print()
+                                print(
+                                    f">>> LADDER ENTRY  #{nt['trade_id']} {direction:<5} "
+                                    f"rung 1 @ ${trigger:.2f}  lot {LOT_SIZE}  "
+                                    f"(anchor ${ladder_anchor:.2f}, ±${LADDER_STEP_USD:.0f})  "
+                                    f"lock ${nt['lock_price']:.2f}  "
+                                    f"master close @ ${trigger - MASTER_CLOSE_BUFFER_USD if direction == 'LONG' else trigger + MASTER_CLOSE_BUFFER_USD:.2f}  "
+                                    f"cycle {current_cycle_id}  "
+                                    f"[IST {ist_now:%H:%M:%S}]"
+                                )
+                                log_event("trade_entry", {
+                                    "trade_id": nt["trade_id"],
+                                    "cycle_id": current_cycle_id,
+                                    "session_date": session_date,
+                                    "direction": direction,
+                                    "lot": LOT_SIZE,
+                                    "entry_price": trigger,
+                                    "ladder_anchor": ladder_anchor,
+                                    "ladder_position": 1,
+                                    "trigger_reason": "FIRST_RUNG",
+                                    "lock_price": nt["lock_price"],
+                                    "bid_at_trigger": last_price,
+                                    "strategy": "ladder",
+                                }, server_now, ist_now)
+                                last_high = None
+
+                        else:
+                            # Continuing ladder — next rung at latest ± $10
+                            next_trigger = ladder_next_entry(
+                                ladder_direction, ladder_latest_entry)
+                            should_fire = (
+                                (ladder_direction == "LONG" and last_price >= next_trigger)
+                                or
+                                (ladder_direction == "SHORT" and last_price <= next_trigger)
+                            )
+                            if should_fire:
+                                rung_n = len(ladder_open) + 1
+                                session_date = active_anchor.date().isoformat()
+                                nt = make_ladder_trade(
+                                    ladder_trade_id, ladder_direction, next_trigger,
+                                    ladder_anchor, server_now, ist_now,
+                                    LOT_SIZE, rung_n,
+                                )
+                                nt["cycle_id"] = current_cycle_id
+                                nt["session_date"] = session_date
+                                nt["trigger_reason"] = "LADDER_CONTINUATION"
+                                ladder_open.append(nt)
+
+                                # Cascade existing locks to the new latest entry
+                                cascade_locks(ladder_open, next_trigger)
+                                ladder_latest_entry = next_trigger
+                                ladder_trade_id += 1
+                                fired_this_tick = True
+
+                                close_at = (next_trigger - MASTER_CLOSE_BUFFER_USD
+                                            if ladder_direction == "LONG"
+                                            else next_trigger + MASTER_CLOSE_BUFFER_USD)
+                                if last_high is not None:
+                                    print()
+                                print(
+                                    f">>> LADDER ENTRY  #{nt['trade_id']} {ladder_direction:<5} "
+                                    f"rung {rung_n} @ ${next_trigger:.2f}  lot {LOT_SIZE}  "
+                                    f"(total exposure {rung_n * LOT_SIZE:g} lot)  "
+                                    f"all locks → ${next_trigger:.2f}  "
+                                    f"master close @ ${close_at:.2f}  "
+                                    f"cycle {current_cycle_id}  "
+                                    f"[IST {ist_now:%H:%M:%S}]"
+                                )
+                                log_event("trade_entry", {
+                                    "trade_id": nt["trade_id"],
+                                    "cycle_id": current_cycle_id,
+                                    "session_date": session_date,
+                                    "direction": ladder_direction,
+                                    "lot": LOT_SIZE,
+                                    "entry_price": next_trigger,
+                                    "ladder_anchor": ladder_anchor,
+                                    "ladder_position": rung_n,
+                                    "trigger_reason": "LADDER_CONTINUATION",
+                                    "lock_price": nt["lock_price"],
+                                    "bid_at_trigger": last_price,
+                                    "strategy": "ladder",
+                                    "cascaded_locks_to": next_trigger,
+                                }, server_now, ist_now)
+                                log_event("ladder_lock_cascade", {
+                                    "new_lock_price": next_trigger,
+                                    "rungs_affected": [t["trade_id"] for t in ladder_open],
+                                    "direction": ladder_direction,
+                                }, server_now, ist_now)
+                                last_high = None
+
+                    # === Per-tick risk + watermark telemetry ===
+                    # Watermarks must update every tick — the ladder engine
+                    # doesn't call update_trail() (no individual trail stops),
+                    # so without this block high_water/low_water freeze at entry
+                    # and MFE/MAE come out as zeros. BUG FIX from the v1 CSV.
+                    if ladder_open:
+                        for t in ladder_open:
+                            if last_price > t["high_water"]:
+                                t["high_water"] = last_price
+                            if last_price < t["low_water"]:
+                                t["low_water"] = last_price
+
+                        floating = unrealized_pnl(ladder_open, last_price, contract_size)
+                        if floating < max_floating_dd:
+                            max_floating_dd = floating
+                        rungs_now = len(ladder_open)
+                        if rungs_now > max_rungs_today:
+                            max_rungs_today = rungs_now
+                        exposure_now = rungs_now * LOT_SIZE
+                        if exposure_now > max_exposure_lots:
+                            max_exposure_lots = exposure_now
 
                 current_high = data["high"]["price"]
                 current_low = data["low"]["price"]
@@ -1108,19 +1919,56 @@ def run():
                     daily_records[record["date"]] = record
                     save_log(LOG_PATH, daily_records)
 
-                # Live heartbeat — pivot + candidate + trade summary
+                # Live heartbeat — pivot + candidate + ladder + day H/L
                 print_heartbeat(
                     pivots[-1], candidate, REVERSAL_THRESHOLD_USD,
                     pip_size, last_price,
                     current_high, current_low,
                     open_trades, closed_pnl_total, contract_size,
+                    ladder_anchor=ladder_anchor,
+                    ladder_direction=ladder_direction,
+                    ladder_latest_entry=ladder_latest_entry,
+                    ladder_open=ladder_open,
+                    ladder_closed_pnl=ladder_closed_pnl,
+                    ladder_cycles=ladder_cycles,
+                    max_floating_dd=max_floating_dd,
                 )
 
             time.sleep(POLL_SECONDS)
 
         except KeyboardInterrupt:
-            log_event("shutdown", {"reason": "keyboard_interrupt"},
-                      datetime.utcnow(), get_ist_now())
+            today_str = (active_anchor.date().isoformat()
+                         if active_anchor else "today")
+            all_closed = (closed_trades_today
+                          if STRATEGY_MODE == "pivot"
+                          else ladder_closed_today)
+            carryover = (open_trades
+                         if STRATEGY_MODE == "pivot"
+                         else ladder_open)
+            shutdown_price = 0
+            try:
+                tick = mt5.symbol_info_tick(SYMBOL)
+                if tick is not None:
+                    shutdown_price = tick.bid
+            except Exception:
+                pass
+            risk_stats_dict = {
+                "max_floating_dd": max_floating_dd,
+                "max_rungs": max_rungs_today,
+                "max_exposure_lots": max_exposure_lots,
+            }
+            print_daily_summary(today_str, all_closed, ladder_cycles,
+                                carryover_trades=carryover,
+                                current_price=shutdown_price,
+                                contract_size=contract_size,
+                                risk_stats=risk_stats_dict)
+            log_event("shutdown", {
+                "reason": "keyboard_interrupt",
+                "summary": daily_summary(all_closed, risk_stats=risk_stats_dict),
+                "ladder_cycles": ladder_cycles,
+                "carryover_open_count": len(carryover),
+                "carryover_trade_ids": [t["trade_id"] for t in carryover],
+            }, datetime.utcnow(), get_ist_now())
             raise
         except Exception as e:
             print(f"\n[{get_ist_now():%H:%M:%S}] tracker error: {e}")
