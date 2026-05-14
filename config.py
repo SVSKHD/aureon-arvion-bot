@@ -43,6 +43,14 @@ SL_DIST: float = 20.0           # Stop loss: trigger ± 20
 LOCK_STEP: float = 0.30         # Trail step size
 LOCK_STEPS_COUNT: int = 9       # Number of trail levels (0.30, 0.60, ..., 2.70)
 
+# ============ TRAILING STOP ============
+TRAIL_MODE = "uncapped"
+TRAIL_BE_TRIGGER   = 0.30
+TRAIL_GAP          = 0.30
+TRAIL_MIN_STEP     = 0.10
+TRAIL_LOG_INTERVAL = 0.50
+TRAIL_TG_INTERVAL  = 2.00
+
 # ----------------------------------------------------------------------------
 # SAFETY
 # ----------------------------------------------------------------------------

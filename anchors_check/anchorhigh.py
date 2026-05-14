@@ -78,6 +78,22 @@ STRATEGY_MODE = "ladder"        # "ladder" (active) or "pivot" (old engine, kept
 LADDER_STEP_USD = 10.0          # distance between rungs and between anchor and first entry
 MASTER_CLOSE_BUFFER_USD = 5.0   # how far past the latest entry triggers all-close
 
+# === Ladder safety caps ===
+# Hard limits on ladder growth. Without these, a weekend gap or news spike that
+# jumps price past several rung triggers between two polls would pyramid the
+# ladder in a single iteration of the entry loop. MAX_LADDER_RUNGS is the real
+# teeth (an absolute ceiling on concurrent rungs); MAX_RUNGS_PER_TICK just
+# smooths the build rate so one poll can't slam on many rungs at once;
+# MAX_EXPOSURE_LOTS is a belt-and-suspenders lot ceiling that stays correct
+# even if LOT_SIZE changes. NOTE: these bound *exposure during a runaway
+# move* — they are NOT gap protection. A gap that jumps THROUGH the master
+# close still fills every open rung at the gapped price; the only real defence
+# against that is a hard max-loss-per-cycle stop, which this strategy does not
+# yet have. See the realism notes where master close is handled.
+MAX_RUNGS_PER_TICK = 2          # most new rungs that may fire in one poll iteration
+MAX_LADDER_RUNGS = 8            # absolute ceiling on concurrent open rungs in a ladder
+MAX_EXPOSURE_LOTS = 4.0         # absolute ceiling on total open lots (== MAX_LADDER_RUNGS * LOT_SIZE here)
+
 # When the tracker boots mid-day, replay historical M1 bars through the trade
 # engine to synthesise the paper trades that would have fired between 02:00
 # and now. Each backfilled trade is tagged `backfill=True` in the events log
@@ -793,7 +809,14 @@ def backfill_ladder(bars, initial_anchor: float, contract_size: float):
         if (direction is not None
                 and latest_entry is not None
                 and check_ladder_master_close(direction, latest_entry, price)):
-            close_price = ladder_master_close_price(direction, latest_entry)
+            # Realistic fill: close at the bar-close price that breached the
+            # threshold, NOT the theoretical latest_entry ∓ buffer. On a calm
+            # bar the two are within cents; on a gap bar the theoretical price
+            # would massively understate the loss. The new anchor is the same
+            # actual price, so the next cycle starts from where this one really
+            # ended (matters when a gap closes the cycle far past the buffer).
+            theoretical_close = ladder_master_close_price(direction, latest_entry)
+            close_price = price
             for t in list(open_trades):
                 close_paper_trade(t, close_price, "MASTER_CLOSE",
                                   server_time, bar_ist, contract_size)
@@ -806,9 +829,19 @@ def backfill_ladder(bars, initial_anchor: float, contract_size: float):
             cycles += 1
 
         # === Entries (loop in case price gap fired multiple rungs in one bar) ===
+        # Capped: a single gap bar can't pyramid the ladder past MAX_LADDER_RUNGS
+        # / MAX_EXPOSURE_LOTS, and no more than MAX_RUNGS_PER_TICK rungs fire per
+        # bar (mirrors the live engine's per-poll cap so backfill ≈ live).
+        rungs_fired_this_bar = 0
         fired = True
         while fired:
             fired = False
+            if len(open_trades) >= MAX_LADDER_RUNGS:
+                break
+            if len(open_trades) * LOT_SIZE >= MAX_EXPOSURE_LOTS:
+                break
+            if rungs_fired_this_bar >= MAX_RUNGS_PER_TICK:
+                break
             if direction is None:
                 d, trigger = bidirectional_trigger(anchor, price)
                 if d is not None:
@@ -819,6 +852,7 @@ def backfill_ladder(bars, initial_anchor: float, contract_size: float):
                     direction = d
                     latest_entry = trigger
                     trade_id += 1
+                    rungs_fired_this_bar += 1
                     fired = True
             else:
                 nxt = ladder_next_entry(direction, latest_entry)
@@ -836,6 +870,7 @@ def backfill_ladder(bars, initial_anchor: float, contract_size: float):
                     cascade_locks(open_trades, nxt)
                     latest_entry = nxt
                     trade_id += 1
+                    rungs_fired_this_bar += 1
                     fired = True
 
     return {
@@ -1691,8 +1726,19 @@ def run():
                             and ladder_latest_entry is not None
                             and check_ladder_master_close(
                                 ladder_direction, ladder_latest_entry, last_price)):
-                        close_price = ladder_master_close_price(
+                        # Realistic fill: close every rung at the actual bid that
+                        # tripped the threshold (last_price), NOT the theoretical
+                        # latest_entry ∓ buffer. In calm 1s polling the two differ
+                        # by cents; through a gap the theoretical price would hide
+                        # most of the loss (a gap-down past a LONG master close
+                        # fills you at the gapped price, not the buffer level).
+                        # Logging both makes the slippage auditable. The new
+                        # anchor is also the actual fill, so the next cycle starts
+                        # from where this one truly ended — important after a gap.
+                        theoretical_close = ladder_master_close_price(
                             ladder_direction, ladder_latest_entry)
+                        close_price = last_price
+                        close_slippage = round(close_price - theoretical_close, 4)
 
                         if last_high is not None:
                             print()
@@ -1700,7 +1746,9 @@ def run():
                             f">>> MASTER CLOSE  {ladder_direction} ladder "
                             f"({len(ladder_open)} rung(s))  "
                             f"latest entry ${ladder_latest_entry:.2f}  "
-                            f"close @ ${close_price:.2f}  [IST {ist_now:%H:%M:%S}]"
+                            f"close @ ${close_price:.2f} "
+                            f"(theo ${theoretical_close:.2f}, slip ${close_slippage:+.2f})  "
+                            f"[IST {ist_now:%H:%M:%S}]"
                         )
 
                         closed_ids = []
@@ -1735,7 +1783,8 @@ def run():
                         old_direction = ladder_direction
                         prev_latest = ladder_latest_entry
 
-                        # The flip — close price becomes the new bidirectional anchor
+                        # The flip — the ACTUAL fill price becomes the new
+                        # bidirectional anchor (see realism note above).
                         ladder_anchor = close_price
                         ladder_direction = None
                         ladder_latest_entry = None
@@ -1748,6 +1797,8 @@ def run():
                             "direction_closed": old_direction,
                             "latest_entry": prev_latest,
                             "close_price": close_price,
+                            "theoretical_close": theoretical_close,
+                            "close_slippage_usd": close_slippage,
                             "rungs_closed": len(closed_ids),
                             "closed_trade_ids": closed_ids,
                             "cycle_pnl_usd": round(cycle_pnl, 2),
@@ -1762,10 +1813,64 @@ def run():
                         )
                         last_high = None
 
-                    # 2. Entry checks — may fire multiple rungs if price has run far
+                    # 2. Entry checks — may fire multiple rungs if price has run far.
+                    #    Capped three ways so a gap between polls can't pyramid the
+                    #    ladder uncontrollably: MAX_RUNGS_PER_TICK throttles the
+                    #    build rate per poll, MAX_LADDER_RUNGS / MAX_EXPOSURE_LOTS
+                    #    are absolute ceilings. When a cap blocks an entry that
+                    #    would otherwise have fired, it's logged once per tick as a
+                    #    ladder_cap_hit event (a gap fingerprint worth auditing).
+                    rungs_fired_this_tick = 0
+                    cap_hit_logged = False
                     fired_this_tick = True
                     while fired_this_tick:
                         fired_this_tick = False
+
+                        # --- Safety caps: stop firing rungs once any limit is hit ---
+                        _rungs_now = len(ladder_open)
+                        _cap_reason = None
+                        if _rungs_now >= MAX_LADDER_RUNGS:
+                            _cap_reason = "max_ladder_rungs"
+                        elif _rungs_now * LOT_SIZE >= MAX_EXPOSURE_LOTS:
+                            _cap_reason = "max_exposure_lots"
+                        elif rungs_fired_this_tick >= MAX_RUNGS_PER_TICK:
+                            _cap_reason = "max_rungs_per_tick"
+                        if _cap_reason is not None:
+                            # Only log if price actually WANTS another rung right
+                            # now — otherwise the cap isn't really "biting".
+                            if ladder_direction is not None and ladder_latest_entry is not None:
+                                _nxt = ladder_next_entry(ladder_direction, ladder_latest_entry)
+                                _wants_more = (
+                                    (ladder_direction == "LONG" and last_price >= _nxt)
+                                    or
+                                    (ladder_direction == "SHORT" and last_price <= _nxt)
+                                )
+                            else:
+                                _wants_more = False
+                            if _wants_more and not cap_hit_logged:
+                                if last_high is not None:
+                                    print()
+                                print(
+                                    f">>> LADDER CAP  {_cap_reason} hit "
+                                    f"({_rungs_now} rung(s), {_rungs_now * LOT_SIZE:g} lot)  "
+                                    f"— further entries blocked this poll  "
+                                    f"[IST {ist_now:%H:%M:%S}]"
+                                )
+                                log_event("ladder_cap_hit", {
+                                    "reason": _cap_reason,
+                                    "rungs_open": _rungs_now,
+                                    "exposure_lots": _rungs_now * LOT_SIZE,
+                                    "rungs_fired_this_tick": rungs_fired_this_tick,
+                                    "direction": ladder_direction,
+                                    "latest_entry": ladder_latest_entry,
+                                    "bid": last_price,
+                                    "max_ladder_rungs": MAX_LADDER_RUNGS,
+                                    "max_exposure_lots": MAX_EXPOSURE_LOTS,
+                                    "max_rungs_per_tick": MAX_RUNGS_PER_TICK,
+                                }, server_now, ist_now)
+                                cap_hit_logged = True
+                                last_high = None
+                            break
 
                         if ladder_direction is None:
                             # Bidirectional from anchor
@@ -1790,6 +1895,7 @@ def run():
                                 ladder_direction = direction
                                 ladder_latest_entry = trigger
                                 ladder_trade_id += 1
+                                rungs_fired_this_tick += 1
                                 fired_this_tick = True
 
                                 if last_high is not None:
@@ -1845,6 +1951,7 @@ def run():
                                 cascade_locks(ladder_open, next_trigger)
                                 ladder_latest_entry = next_trigger
                                 ladder_trade_id += 1
+                                rungs_fired_this_tick += 1
                                 fired_this_tick = True
 
                                 close_at = (next_trigger - MASTER_CLOSE_BUFFER_USD
