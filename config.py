@@ -39,7 +39,7 @@ COMMENT: str = "Anchor02"       # Order comment prefix
 ANCHOR_HOUR: int = 2            # Broker server hour for anchor (02:00)
 TRIGGER_DIST: float = 5.0      # Entry: anchor ± 5
 TP_DIST: float = 3.0            # Take profit: trigger ± 3
-SL_DIST: float = 15.0           # Stop loss: trigger ± 15
+SL_DIST: float = 20.0           # Stop loss: trigger ± 20
 LOCK_STEP: float = 0.30         # Trail step size
 LOCK_STEPS_COUNT: int = 9       # Number of trail levels (0.30, 0.60, ..., 2.70)
 
@@ -183,7 +183,7 @@ WEEKLY_PROFIT_LOCK_USD: float = 250.0   # Backtest optimum. Override at runtime 
 
 RESCUE_ENABLED: bool = True    # Off by default; flip True after demo validation
 RESCUE_TRIGGER_ADVERSE: float = 10.0  # USD adverse from entry that triggers rescue
-RESCUE_LOT_SIZE: float = None   # type: ignore  # None → uses LOT_SIZE
+RESCUE_LOT_SIZE: float = 0.5   # type: ignore  # None → uses LOT_SIZE
 
 # ----------------------------------------------------------------------------
 # DUAL-BRACKET MODE (ADVANCED — leave OFF until validated)
